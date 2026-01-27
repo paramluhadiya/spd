@@ -1,0 +1,73 @@
+# BSS 64-8 (D=64, d=8, T=64 circuits)
+# --- WandB ---
+wandb_project: spd
+wandb_run_name: null
+wandb_run_name_prefix: ""
+
+# --- General ---
+seed: 0
+n_mask_samples: 1
+ci_fn_type: "mlp"
+ci_fn_hidden_dims: [16]
+sigmoid_type: "leaky_hard"
+
+# Module decomposition: decompose the main computation matrices
+# W_g: (D, D) - scatters from block coords to network coords
+# W_h: (D, D) - gathers from network coords back to block coords
+# The control matrices (W_b, W_b_prime, B_h) are structural and don't need decomposition
+module_info:
+  - module_pattern: "W_g"
+    C: 128  # 2x the number of circuits (T=64)
+  - module_pattern: "W_h"
+    C: 128
+use_delta_component: true
+
+loss_metric_configs:
+  - classname: "ImportanceMinimalityLoss"
+    coeff: 3e-3
+    pnorm: 1.0
+    beta: 0
+  - classname: "StochasticReconLoss"
+    coeff: 1.0
+  - classname: "StochasticReconLayerwiseLoss"
+    coeff: 1.0
+output_loss_type: mse
+
+# --- Training ---
+batch_size: 4096
+eval_batch_size: 4096
+steps: 10_000
+lr_schedule:
+  start_val: 1e-3
+  fn_type: cosine
+  warmup_pct: 0.0
+  final_val_frac: 0.0
+
+# --- Faithfulness Warmup ---
+faithfulness_warmup_steps: 200
+faithfulness_warmup_lr: 0.01
+faithfulness_warmup_weight_decay: 0.1
+
+# --- Logging & Saving ---
+train_log_freq: 100
+eval_freq: 1000
+n_eval_steps: 100
+slow_eval_freq: 5_000
+save_freq: null
+ci_alive_threshold: 0.1
+n_examples_until_dead: 4_096_000
+eval_metric_configs:
+  - classname: "CIHistograms"
+    n_batches_accum: 5
+  - classname: "ComponentActivationDensity"
+  - classname: "CI_L0"
+    groups: null
+  - classname: "CIMeanPerComponent"
+
+# --- Pretrained model info ---
+pretrained_model_class: "spd.experiments.tms.bss_models.BSSModel"
+pretrained_model_path: null  # Set after running train_bss.py
+
+# --- Task Specific ---
+task_config:
+  task_name: bss

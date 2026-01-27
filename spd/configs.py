@@ -79,6 +79,15 @@ class TMSTaskConfig(BaseConfig):
     )
 
 
+class BSSTaskConfig(BaseConfig):
+    """Task config for Block-Structured Superposition model."""
+
+    task_name: Literal["bss"] = Field(
+        default="bss",
+        description="Task identifier for BSS (Block-Structured Superposition)",
+    )
+
+
 class ResidMLPTaskConfig(BaseConfig):
     task_name: Literal["resid_mlp"] = Field(
         default="resid_mlp",
@@ -371,7 +380,7 @@ EvalOnlyMetricConfigType = (
 )
 MetricConfigType = LossMetricConfigType | EvalOnlyMetricConfigType
 
-TaskConfig = TMSTaskConfig | ResidMLPTaskConfig | LMTaskConfig | IHTaskConfig
+TaskConfig = TMSTaskConfig | BSSTaskConfig | ResidMLPTaskConfig | LMTaskConfig | IHTaskConfig
 
 SamplingType = Literal["continuous", "binomial"]
 
