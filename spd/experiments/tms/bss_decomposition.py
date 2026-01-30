@@ -25,13 +25,15 @@ from spd.utils.run_utils import setup_decomposition_run
 from spd.utils.wandb_utils import init_wandb
 
 
-class BSSDataset(Dataset[tuple[Tensor, Tensor]]):
-    """Dataset for BSS model that generates (x_block, active_circuit) pairs.
+class BSSDataset(Dataset[Tensor]):
+    """Dataset for BSS model that generates combined input tensors.
 
     For each sample:
     - Randomly selects one of T circuits
     - Generates a random input for that circuit's block
-    - Returns the full x_block (with zeros elsewhere) and the active circuit index
+    - Returns a combined tensor of shape (batch, D+1) where:
+      - [:, :D] is x_block (input in block coordinates)
+      - [:, D] is the active circuit index (as float for tensor compatibility)
     """
 
     def __init__(
@@ -52,15 +54,15 @@ class BSSDataset(Dataset[tuple[Tensor, Tensor]]):
     def __len__(self) -> int:
         return 2**31
 
-    def generate_batch(self, batch_size: int) -> tuple[Tensor, Tensor]:
-        """Generate a batch of (x_block, active_circuit) pairs."""
+    def generate_batch(self, batch_size: int) -> Tensor:
+        """Generate a batch of combined (x_block, active_circuit) tensors."""
         min_val, max_val = self.value_range
 
         # Randomly select circuits for each sample
         active_circuits = torch.randint(0, self.T, (batch_size,), device=self.device)
 
-        # Initialize x_block with zeros
-        x_block = torch.zeros(batch_size, self.D, device=self.device)
+        # Initialize combined tensor: x_block (D) + circuit_id (1)
+        combined = torch.zeros(batch_size, self.D + 1, device=self.device)
 
         # For each circuit, fill in the appropriate block with random values
         for b in range(batch_size):
@@ -71,9 +73,12 @@ class BSSDataset(Dataset[tuple[Tensor, Tensor]]):
 
             # Generate random values for this block
             values = torch.rand(self.d, device=self.device) * (max_val - min_val) + min_val
-            x_block[b, block_start:block_end] = values
+            combined[b, block_start:block_end] = values
 
-        return x_block, active_circuits
+            # Store circuit ID in last position
+            combined[b, self.D] = float(circuit)
+
+        return combined
 
 
 def main(

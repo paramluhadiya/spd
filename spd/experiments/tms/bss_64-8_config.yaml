@@ -7,8 +7,8 @@ wandb_run_name_prefix: ""
 # --- General ---
 seed: 0
 n_mask_samples: 1
-ci_fn_type: "mlp"
-ci_fn_hidden_dims: [16]
+ci_fn_type: "shared_mlp"
+ci_fn_hidden_dims: [128]
 sigmoid_type: "leaky_hard"
 
 # Module decomposition: decompose the main computation matrices
@@ -17,31 +17,39 @@ sigmoid_type: "leaky_hard"
 # The control matrices (W_b, W_b_prime, B_h) are structural and don't need decomposition
 module_info:
   - module_pattern: "W_g"
-    C: 128  # 2x the number of circuits (T=64)
+    C: 600
   - module_pattern: "W_h"
-    C: 128
+    C: 600
 use_delta_component: true
 
 loss_metric_configs:
+  - classname: "FaithfulnessLoss"
+    coeff: 1.0
   - classname: "ImportanceMinimalityLoss"
     coeff: 3e-3
-    pnorm: 1.0
+    pnorm: 2.0
+    p_anneal_start_frac: 0.0
+    p_anneal_end_frac: 1
+    p_anneal_final_p: 0.5
     beta: 0
   - classname: "StochasticReconLoss"
     coeff: 1.0
-  - classname: "StochasticReconLayerwiseLoss"
-    coeff: 1.0
-output_loss_type: mse
+  - classname: "PGDReconSubsetLoss"
+    coeff: 0.5
+    init: "ones"
+    step_size: 1.0
+    n_steps: 1
+    mask_scope: "shared_across_batch"
+output_loss_type: kl
 
 # --- Training ---
 batch_size: 4096
 eval_batch_size: 4096
-steps: 10_000
+steps: 10000
 lr_schedule:
   start_val: 1e-3
   fn_type: cosine
   warmup_pct: 0.0
-  final_val_frac: 0.0
 
 # --- Faithfulness Warmup ---
 faithfulness_warmup_steps: 200
@@ -63,10 +71,15 @@ eval_metric_configs:
   - classname: "CI_L0"
     groups: null
   - classname: "CIMeanPerComponent"
+  - classname: "PGDReconLoss"
+    init: "ones"
+    step_size: 0.1
+    n_steps: 20
+    mask_scope: "shared_across_batch"
 
 # --- Pretrained model info ---
 pretrained_model_class: "spd.experiments.tms.bss_models.BSSModel"
-pretrained_model_path: null  # Set after running train_bss.py
+pretrained_model_path: "/Users/paramluhadiya/spd_out/train/t-f145f29b/bss.pth"
 
 # --- Task Specific ---
 task_config:

@@ -268,13 +268,19 @@ class BSSModel(LoadableModule):
         """Forward pass for a batch of inputs with their active circuits.
 
         Args:
-            x_block: Input in block coordinates (batch, D)
-            active_circuits: Which circuit to activate for each batch element (batch,)
-                If None, assumes circuit info is encoded in the input somehow.
+            x_block: Input in block coordinates (batch, D) or combined format (batch, D+1)
+                where the last column contains the active circuit index.
+            active_circuits: Which circuit to activate for each batch element (batch,).
+                If None, will be extracted from x_block's last column.
 
         Returns:
             z_block: Output in block coordinates (batch, D)
         """
+        # Handle combined tensor format from SPD framework (D+1 features with circuit ID in last col)
+        if x_block.shape[-1] == self.D + 1:
+            active_circuits = x_block[..., self.D].long()
+            x_block = x_block[..., : self.D]
+
         assert active_circuits is not None, "active_circuits must be provided"
 
         batch_size = x_block.shape[0]
