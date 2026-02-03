@@ -24,7 +24,7 @@ class BSSModelConfig(BaseConfig):
     D: PositiveInt
     d: PositiveInt
     B: float = 1e6
-    device: str = "cpu"
+    device: str = "gpu"
 
     @model_validator(mode="after")
     def validate_divisibility(self) -> Self:
