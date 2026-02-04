@@ -1,6 +1,6 @@
-"""Configuration classes for Block-Structured Superposition (BSS) model."""
+"""Configuration classes for Block-Structured Superposition (BSS) and PingPong models."""
 
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import PositiveInt, model_validator
 
@@ -19,12 +19,16 @@ class BSSModelConfig(BaseConfig):
         d: Block/circuit width
         B: Suppression strength for inactive neurons
         device: Device to run on
+        n_layers: Number of ping-pong layers (for PingPongModel)
+        model_type: "bss" for original BSS, "pingpong" for PingPong model
     """
 
     D: PositiveInt
     d: PositiveInt
     B: float = 1e6
     device: str = "gpu"
+    n_layers: int = 3
+    model_type: Literal["bss", "pingpong"] = "bss"
 
     @model_validator(mode="after")
     def validate_divisibility(self) -> Self:
@@ -38,6 +42,11 @@ class BSSModelConfig(BaseConfig):
     @property
     def num_circuits(self) -> int:
         return self.num_blocks**2
+
+    @property
+    def input_dim(self) -> int:
+        """Input dimension for PingPong model: D + 2 * num_blocks."""
+        return self.D + 2 * self.num_blocks
 
 
 class BSSTrainConfig(BaseConfig):
