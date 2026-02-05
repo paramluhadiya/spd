@@ -25,8 +25,9 @@ module_info:
 use_delta_component: true
 
 loss_metric_configs:
-  - classname: "FaithfulnessLoss"
+  - classname: "ThresholdFaithfulnessLoss"
     coeff: 1.0
+    threshold: 5.0
   - classname: "ImportanceMinimalityLoss"
     coeff: 3e-3
     pnorm: 2.0
