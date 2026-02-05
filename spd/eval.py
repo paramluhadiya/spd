@@ -21,6 +21,7 @@ from spd.configs import (
     Config,
     FaithfulnessLossConfig,
     IdentityCIErrorConfig,
+    ThresholdFaithfulnessLossConfig,
     ImportanceMinimalityLossConfig,
     MetricConfigType,
     PermutedCIPlotsConfig,
@@ -134,6 +135,12 @@ def init_metric(
                 p_anneal_end_frac=cfg.p_anneal_end_frac,
             )
         case FaithfulnessLossConfig():
+            metric = FaithfulnessLoss(
+                model=model,
+                device=device,
+            )
+        case ThresholdFaithfulnessLossConfig():
+            # For eval, use regular FaithfulnessLoss (threshold only matters for training gradients)
             metric = FaithfulnessLoss(
                 model=model,
                 device=device,
