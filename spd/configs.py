@@ -88,6 +88,15 @@ class BSSTaskConfig(BaseConfig):
     )
 
 
+class PingPongTaskConfig(BaseConfig):
+    """Task config for PingPong computation in superposition model."""
+
+    task_name: Literal["pingpong"] = Field(
+        default="pingpong",
+        description="Task identifier for PingPong model",
+    )
+
+
 class ResidMLPTaskConfig(BaseConfig):
     task_name: Literal["resid_mlp"] = Field(
         default="resid_mlp",
@@ -380,7 +389,7 @@ EvalOnlyMetricConfigType = (
 )
 MetricConfigType = LossMetricConfigType | EvalOnlyMetricConfigType
 
-TaskConfig = TMSTaskConfig | BSSTaskConfig | ResidMLPTaskConfig | LMTaskConfig | IHTaskConfig
+TaskConfig = TMSTaskConfig | BSSTaskConfig | PingPongTaskConfig | ResidMLPTaskConfig | LMTaskConfig | IHTaskConfig
 
 SamplingType = Literal["continuous", "binomial"]
 

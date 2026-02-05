@@ -14,12 +14,13 @@ sigmoid_type: "leaky_hard"
 # Module decomposition: decompose the layer weight matrices
 # Each layer is (input_dim x input_dim) where input_dim = D + 2*num_blocks = 80
 # The c->c block (D x D) contains the actual circuit weights
+# PingPong uses nn.Sequential, so layers are model.0, model.2, model.4 (Linear layers)
 module_info:
-  - module_pattern: "layers.0"
+  - module_pattern: "model.0"
     C: 600
-  - module_pattern: "layers.1"
+  - module_pattern: "model.2"
     C: 600
-  - module_pattern: "layers.2"
+  - module_pattern: "model.4"
     C: 600
 use_delta_component: true
 
@@ -61,7 +62,7 @@ faithfulness_warmup_weight_decay: 0.1
 train_log_freq: 100
 eval_freq: 1000
 n_eval_steps: 100
-slow_eval_freq: 11000
+slow_eval_freq: 2000
 save_freq: null
 ci_alive_threshold: 0.1
 n_examples_until_dead: 4_096_000
@@ -80,7 +81,7 @@ eval_metric_configs:
 
 # --- Pretrained model info ---
 pretrained_model_class: "spd.experiments.tms.bss_models.PingPongModel"
-pretrained_model_path: null  # Set after running train_bss.py --model-type pingpong
+pretrained_model_path: "/Users/paramluhadiya/spd_out/train/t-71cc3a72/pingpong.pth"
 
 # --- Task Specific ---
 task_config:
