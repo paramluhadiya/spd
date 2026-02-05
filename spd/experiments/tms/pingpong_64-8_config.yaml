@@ -8,7 +8,7 @@ wandb_run_name_prefix: ""
 seed: 0
 n_mask_samples: 1
 ci_fn_type: "shared_mlp"
-ci_fn_hidden_dims: [128]
+ci_fn_hidden_dims: [256]
 sigmoid_type: "leaky_hard"
 
 # Module decomposition: decompose the layer weight matrices
@@ -25,11 +25,10 @@ module_info:
 use_delta_component: true
 
 loss_metric_configs:
-  - classname: "ThresholdFaithfulnessLoss"
-    coeff: 1.0
-    threshold: 5.0
+  - classname: "FaithfulnessLoss"
+    coeff: 5.0
   - classname: "ImportanceMinimalityLoss"
-    coeff: 3e-3
+    coeff: 3e-4
     pnorm: 2.0
     p_anneal_start_frac: 0.0
     p_anneal_end_frac: 1
@@ -38,19 +37,20 @@ loss_metric_configs:
   - classname: "StochasticReconLoss"
     coeff: 1.0
   - classname: "PGDReconSubsetLoss"
-    coeff: 0.5
+    coeff: 1.0
     init: "ones"
-    step_size: 1.0
-    n_steps: 1
+    step_size: 0.5
+    n_steps: 4
     mask_scope: "shared_across_batch"
 output_loss_type: mse
 
 # --- Training ---
 batch_size: 4096
 eval_batch_size: 4096
-steps: 10000
+steps: 20000
 lr_schedule:
-  start_val: 1e-3
+  start_val: 3e-4
+  final_val_frac: 0.1
   fn_type: cosine
   warmup_pct: 0.0
 
