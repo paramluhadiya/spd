@@ -50,6 +50,8 @@ class BSSDataset(Dataset[Tensor]):
         self.device = device
         self.f = f
         self.value_range = value_range
+        # Pre-compute f as tensor for vectorized lookup
+        self.f_tensor = torch.tensor([f[t] for t in range(self.T)], device=device)
 
     def __len__(self) -> int:
         return 2**31
@@ -57,6 +59,7 @@ class BSSDataset(Dataset[Tensor]):
     def generate_batch(self, batch_size: int) -> Tensor:
         """Generate a batch of combined (x_block, active_circuit) tensors."""
         min_val, max_val = self.value_range
+        d = self.d
 
         # Randomly select circuits for each sample
         active_circuits = torch.randint(0, self.T, (batch_size,), device=self.device)
@@ -64,19 +67,19 @@ class BSSDataset(Dataset[Tensor]):
         # Initialize combined tensor: x_block (D) + circuit_id (1)
         combined = torch.zeros(batch_size, self.D + 1, device=self.device)
 
-        # For each circuit, fill in the appropriate block with random values
-        for b in range(batch_size):
-            circuit = int(active_circuits[b].item())
-            block = self.f[circuit]
-            block_start = self.d * block
-            block_end = block_start + self.d
+        # Vectorized: look up blocks for all circuits at once
+        blocks = self.f_tensor[active_circuits]  # (batch_size,)
+        block_starts = d * blocks
 
-            # Generate random values for this block
-            values = torch.rand(self.d, device=self.device) * (max_val - min_val) + min_val
-            combined[b, block_start:block_end] = values
+        # Generate all random values at once
+        values = torch.rand(batch_size, d, device=self.device) * (max_val - min_val) + min_val
 
-            # Store circuit ID in last position
-            combined[b, self.D] = float(circuit)
+        # Scatter values into the correct block positions
+        col_indices = block_starts.unsqueeze(1) + torch.arange(d, device=self.device)
+        combined.scatter_(dim=1, index=col_indices, src=values)
+
+        # Store circuit IDs in last position
+        combined[:, self.D] = active_circuits.float()
 
         return combined
 

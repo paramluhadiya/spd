@@ -191,6 +191,20 @@ class FaithfulnessLossConfig(LossMetricConfig):
     classname: Literal["FaithfulnessLoss"] = "FaithfulnessLoss"
 
 
+class ThresholdFaithfulnessLossConfig(LossMetricConfig):
+    """Faithfulness loss that stops penalizing suppression terms once they're 'working'.
+
+    For parameters where target < -threshold (suppression terms):
+      - If learned < -threshold: no penalty (suppression is working)
+      - If learned >= -threshold: penalize the gap
+
+    For other parameters: normal MSE.
+    """
+
+    classname: Literal["ThresholdFaithfulnessLoss"] = "ThresholdFaithfulnessLoss"
+    threshold: float = 5.0
+
+
 class ImportanceMinimalityLossConfig(LossMetricConfig):
     classname: Literal["ImportanceMinimalityLoss"] = "ImportanceMinimalityLoss"
     pnorm: NonNegativeFloat
@@ -372,7 +386,12 @@ ReconLossConfigType = (
     | StochasticHiddenActsReconLossConfig
 )
 
-LossMetricConfigType = FaithfulnessLossConfig | ImportanceMinimalityLossConfig | ReconLossConfigType
+LossMetricConfigType = (
+    FaithfulnessLossConfig
+    | ThresholdFaithfulnessLossConfig
+    | ImportanceMinimalityLossConfig
+    | ReconLossConfigType
+)
 
 EvalOnlyMetricConfigType = (
     CEandKLLossesConfig

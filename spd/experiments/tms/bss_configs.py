@@ -25,7 +25,7 @@ class BSSModelConfig(BaseConfig):
 
     D: PositiveInt
     d: PositiveInt
-    B: float = 1e6
+    B: float = 10.0
     device: str = "gpu"
     n_layers: int = 3
     model_type: Literal["bss", "pingpong"] = "bss"

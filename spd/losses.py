@@ -19,6 +19,7 @@ from spd.configs import (
     StochasticReconLayerwiseLossConfig,
     StochasticReconLossConfig,
     StochasticReconSubsetLossConfig,
+    ThresholdFaithfulnessLossConfig,
     UnmaskedReconLossConfig,
 )
 from spd.metrics import (
@@ -34,6 +35,7 @@ from spd.metrics import (
     stochastic_recon_layerwise_loss,
     stochastic_recon_loss,
     stochastic_recon_subset_loss,
+    threshold_faithfulness_loss,
     unmasked_recon_loss,
 )
 from spd.models.component_model import CIOutputs, ComponentModel
@@ -65,6 +67,12 @@ def compute_total_loss(
         match cfg:
             case FaithfulnessLossConfig():
                 loss = faithfulness_loss(weight_deltas=weight_deltas)
+            case ThresholdFaithfulnessLossConfig():
+                loss = threshold_faithfulness_loss(
+                    weight_deltas=weight_deltas,
+                    model=model,
+                    threshold=cfg.threshold,
+                )
             case ImportanceMinimalityLossConfig():
                 loss = importance_minimality_loss(
                     ci_upper_leaky=ci.upper_leaky,

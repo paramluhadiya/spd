@@ -14,6 +14,7 @@ from .ci_mean_per_component import CIMeanPerComponent as CIMeanPerComponent
 from .component_activation_density import ComponentActivationDensity as ComponentActivationDensity
 from .faithfulness_loss import FaithfulnessLoss as FaithfulnessLoss
 from .faithfulness_loss import faithfulness_loss as faithfulness_loss
+from .faithfulness_loss import threshold_faithfulness_loss as threshold_faithfulness_loss
 from .identity_ci_error import IdentityCIError as IdentityCIError
 from .importance_minimality_loss import ImportanceMinimalityLoss as ImportanceMinimalityLoss
 from .importance_minimality_loss import importance_minimality_loss as importance_minimality_loss

@@ -68,24 +68,16 @@ class PingPongDataset(Dataset[Tensor]):
         # Initialize full input tensor
         x = torch.zeros(batch_size, self.input_dim, device=self.device)
 
-        # Fill x_block: put random values in block i for each sample
-        for b in range(batch_size):
-            i = int(i_indices[b].item())
-            block_start = d * i
-            values = torch.rand(d, device=self.device) * (max_val - min_val) + min_val
-            x[b, block_start : block_start + d] = values
+        # Fill x_block: put random values in block i for each sample (vectorized)
+        values = torch.rand(batch_size, d, device=self.device) * (max_val - min_val) + min_val
+        block_starts = d * i_indices  # (batch_size,)
+        col_indices = block_starts.unsqueeze(1) + torch.arange(d, device=self.device)  # (batch_size, d)
+        x.scatter_(dim=1, index=col_indices, src=values)
 
-        # Fill one_hot_i
-        one_hot_i_start = D
-        for b in range(batch_size):
-            i = int(i_indices[b].item())
-            x[b, one_hot_i_start + i] = 1.0
-
-        # Fill one_hot_j
-        one_hot_j_start = D + num_blocks
-        for b in range(batch_size):
-            j = int(j_indices[b].item())
-            x[b, one_hot_j_start + j] = 1.0
+        # Fill one_hot_i and one_hot_j using advanced indexing
+        batch_indices = torch.arange(batch_size, device=self.device)
+        x[batch_indices, D + i_indices] = 1.0
+        x[batch_indices, D + num_blocks + j_indices] = 1.0
 
         return x
 
