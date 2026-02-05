@@ -473,16 +473,17 @@ class PingPongModel(LoadableModule):
             self._circuit_weights[layer] = {}
             self._circuit_biases[layer] = {}
             for t in range(T):
-                self._circuit_weights[layer][t] = torch.randn(d, d) * 0.5
+                self._circuit_weights[layer][t] = torch.randn(d, d) * (2/self.d)**0.5
                 self._circuit_biases[layer][t] = torch.randn(d)
 
-        # Build weight matrices for each layer
-        # Each layer has shape (input_dim, input_dim) to preserve one-hots
-        self.layers = nn.ModuleList()
-        for layer in range(n_layers):
+        # Build the network as Sequential with interleaved Linear and ReLU
+        layers: list[nn.Module] = []
+        for layer_idx in range(n_layers):
             linear = nn.Linear(self.input_dim, self.input_dim, bias=False)
-            linear.weight.data = self._build_layer_weights(layer)
-            self.layers.append(linear)
+            linear.weight.data = self._build_layer_weights(layer_idx)
+            layers.append(linear)
+            layers.append(nn.ReLU())
+        self.model = nn.Sequential(*layers)
 
     def _circuit_id_to_ij(self, t: int) -> tuple[int, int]:
         """Convert circuit ID to (i, j) block indices."""
@@ -493,18 +494,6 @@ class PingPongModel(LoadableModule):
     def _ij_to_circuit_id(self, i: int, j: int) -> int:
         """Convert (i, j) block indices to circuit ID."""
         return i * self.num_blocks + j
-
-    def _get_source_dest_blocks(self, layer: int, i: int, j: int) -> tuple[int, int]:
-        """Get source and destination blocks for a given layer and circuit (i,j).
-
-        Ping-pong pattern:
-            Layer 0: i → j (source=i, dest=j)
-            Layer 1: j → i (source=j, dest=i)
-            Layer 2: i → j (source=i, dest=j)
-        """
-        if layer % 2 == 0:
-            return i, j  # source=i, dest=j
-        return j, i  # source=j, dest=i
 
     def _build_layer_weights(self, layer: int) -> Float[Tensor, "input_dim input_dim"]:
         """Build the weight matrix for a layer.
@@ -540,8 +529,6 @@ class PingPongModel(LoadableModule):
         W[c_start:c_end, c_start:c_end] = W_cc
 
         # i→c and j→c blocks: bias and suppression
-        # For odd layers (0, 2, ...): source is i, so i provides bias, j provides suppression
-        # For even layers (1, 3, ...): source is j, so j provides bias, i provides suppression
         W_ic, W_jc = self._build_bias_and_mask_blocks(layer)
         W[c_start:c_end, i_start:i_end] = W_ic
         W[c_start:c_end, j_start:j_end] = W_jc
@@ -549,29 +536,20 @@ class PingPongModel(LoadableModule):
         return W
 
     def _build_cc_block(self, layer: int) -> Float[Tensor, "D D"]:
-        """Build c→c block: scatters from source block, applies circuit weights, gathers to dest.
-
-        For circuit (i,j) at layer l:
-            - Read from source block (i if l%2==0, j if l%2==1)
-            - Apply W^l_{i,j}
-            - Write to dest block (j if l%2==0, i if l%2==1)
-        """
+        """Build c→c block. This contains all embedded circuits."""
         D, d, T = self.D, self.d, self.T
         W_cc = torch.zeros(D, D)
 
         for t in range(T):
             i, j = self._circuit_id_to_ij(t)
-            src_block, dst_block = self._get_source_dest_blocks(layer, i, j)
+            # Ping-pong: even layers go i→j, odd layers go j→i
+            src_block, dst_block = (i, j) if layer % 2 == 0 else (j, i)
 
             W_t = self._circuit_weights[layer][t]
             src_start = d * src_block
             dst_start = d * dst_block
 
-            # W_cc[dst_start:dst_start+d, src_start:src_start+d] gets contribution from circuit t
-            # But circuits share blocks, so we accumulate
-            for n in range(d):  # output position within dest block
-                for k in range(d):  # input position within src block
-                    W_cc[dst_start + n, src_start + k] += W_t[n, k]
+            W_cc[dst_start : dst_start + d, src_start : src_start + d] += W_t
 
         return W_cc
 
@@ -596,54 +574,27 @@ class PingPongModel(LoadableModule):
 
         for t in range(T):
             i, j = self._circuit_id_to_ij(t)
-            _, dst_block = self._get_source_dest_blocks(layer, i, j)
             b_t = self._circuit_biases[layer][t]
 
-            dst_start = d * dst_block
-
-            # The one-hot for the source block index provides the bias
-            # The one-hot for the dest block index provides the suppression mask
-            # But we need to think about which one-hot encodes which:
-            # - one_hot_i always encodes block i
-            # - one_hot_j always encodes block j
-
-            # For even layers (src=i, dst=j):
-            #   - one_hot_i[i]=1 should trigger bias for circuits with this i
-            #   - one_hot_j[j]=1 should trigger suppression to non-j blocks
-            # For odd layers (src=j, dst=i):
-            #   - one_hot_j[j]=1 should trigger bias for circuits with this j
-            #   - one_hot_i[i]=1 should trigger suppression to non-i blocks
-
+            # Even layers: i→j (bias from one_hot_i, suppress via one_hot_j)
+            # Odd layers: j→i (bias from one_hot_j, suppress via one_hot_i)
             if layer % 2 == 0:
-                # Source is block i, dest is block j
-                # Bias from one_hot_i: when one_hot_i[i]=1, add bias to dest neurons
-                for n in range(d):
-                    W_ic[dst_start + n, i] += b_t[n]
-                # Suppression from one_hot_j: when one_hot_j[j]=1, suppress non-j blocks
-                # This is handled by adding -B to all blocks except j when j-th one-hot is 1
+                dst_start = d * j
+                W_ic[dst_start : dst_start + d, i] += b_t
             else:
-                # Source is block j, dest is block i
-                # Bias from one_hot_j: when one_hot_j[j]=1, add bias to dest neurons
-                for n in range(d):
-                    W_jc[dst_start + n, j] += b_t[n]
-                # Suppression from one_hot_i
+                dst_start = d * i
+                W_jc[dst_start : dst_start + d, j] += b_t
 
-        # Now add suppression: for each one-hot position, suppress non-target blocks
-        # When one_hot_j[k]=1 and layer is even, suppress all blocks except k
-        # When one_hot_i[k]=1 and layer is odd, suppress all blocks except k
-        for k in range(num_blocks):
-            for block in range(num_blocks):
-                block_start = d * block
-                if layer % 2 == 0:
-                    # Suppression via one_hot_j: when j=k, suppress non-k blocks
-                    if block != k:
-                        for n in range(d):
-                            W_jc[block_start + n, k] = -B
-                else:
-                    # Suppression via one_hot_i: when i=k, suppress non-k blocks
-                    if block != k:
-                        for n in range(d):
-                            W_ic[block_start + n, k] = -B
+        # Suppression: fill with -B, then zero out the "selected" diagonal blocks
+        # When one_hot[k]=1, block k should NOT be suppressed, all others should
+        if layer % 2 == 0:
+            W_jc.fill_(-B)
+            for k in range(num_blocks):
+                W_jc[d * k : d * (k + 1), k] = 0
+        else:
+            W_ic.fill_(-B)
+            for k in range(num_blocks):
+                W_ic[d * k : d * (k + 1), k] = 0
 
         return W_ic, W_jc
 
@@ -658,26 +609,9 @@ class PingPongModel(LoadableModule):
         return self
 
     @override
-    def forward(
-        self,
-        x: Float[Tensor, "... input_dim"],
-        active_circuits: Int[Tensor, "..."] | None = None,
-        **_: Any,
-    ) -> Float[Tensor, "... input_dim"]:
-        """Forward pass.
-
-        Args:
-            x: Input tensor of shape (..., input_dim) where input_dim = D + 2*num_blocks.
-                Format: [x_block, one_hot_i, one_hot_j]
-            active_circuits: Not used directly (circuit selection via one-hots in input).
-
-        Returns:
-            Output tensor of shape (..., input_dim).
-        """
-        h = x
-        for layer in self.layers:
-            h = F.relu(layer(h))
-        return h
+    def forward(self, x: Float[Tensor, "... input_dim"]) -> Float[Tensor, "... input_dim"]:
+        """Forward pass. Circuit selection is via one-hot vectors in input."""
+        return self.model(x)
 
     def forward_single(
         self,
@@ -725,7 +659,7 @@ class PingPongModel(LoadableModule):
     def verify_circuit(self, circuit_id: int, x_input: Tensor | None = None) -> float:
         """Verify that network output matches direct circuit computation."""
         device = next(self.parameters()).device
-        if x_input is None:
+        if x_input is None:  # noqa: SIM108
             x = torch.randn(self.d, device=device)
         else:
             x = x_input.to(device)
@@ -760,39 +694,3 @@ class PingPongModel(LoadableModule):
         """Fetch a pretrained model from wandb or local path."""
         run_info = PingPongTargetRunInfo.from_path(path)
         return cls.from_run_info(run_info)
-
-    @override
-    def state_dict(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        """Override to include circuit weights/biases."""
-        state = super().state_dict(*args, **kwargs)
-        state["_circuit_weights"] = {
-            layer: {t: v.cpu() for t, v in circuits.items()}
-            for layer, circuits in self._circuit_weights.items()
-        }
-        state["_circuit_biases"] = {
-            layer: {t: v.cpu() for t, v in circuits.items()}
-            for layer, circuits in self._circuit_biases.items()
-        }
-        return state
-
-    @override
-    def load_state_dict(
-        self, state_dict: Mapping[str, Any], strict: bool = True, assign: bool = False
-    ) -> Any:
-        """Override to load circuit weights/biases."""
-        state_dict_mutable = dict(state_dict)
-        circuit_weights = state_dict_mutable.pop("_circuit_weights", None)
-        circuit_biases = state_dict_mutable.pop("_circuit_biases", None)
-
-        result = super().load_state_dict(state_dict_mutable, strict=strict, assign=assign)
-
-        if circuit_weights is not None:
-            self._circuit_weights = circuit_weights
-        if circuit_biases is not None:
-            self._circuit_biases = circuit_biases
-
-        # Rebuild layer weights from loaded circuit data
-        for layer in range(self.n_layers):
-            self.layers[layer].weight.data = self._build_layer_weights(layer)
-
-        return result
