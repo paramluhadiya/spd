@@ -86,7 +86,6 @@ eval_metric_configs:
     n_steps: 20
     mask_scope: "shared_across_batch"
   - classname: "UnmaskedReconLoss"
-    output_loss_type: mse
 
 # --- Pretrained model info ---
 pretrained_model_class: "spd.experiments.tms.bss_models.PingPongModel"
