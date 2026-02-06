@@ -93,7 +93,7 @@ if __name__ == "__main__":
     parser.add_argument("--d", type=int, default=8)
     parser.add_argument("--n-layers", type=int, default=3)
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--wandb-project", type=str, default="spd")
+    parser.add_argument("--wandb-project", type=str, default=None)
     args = parser.parse_args()
 
     device = get_device()
