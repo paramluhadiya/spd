@@ -28,7 +28,7 @@ loss_metric_configs:
   - classname: "FaithfulnessLoss"
     coeff: 5.0
   - classname: "ImportanceMinimalityLoss"
-    coeff: 5e-4
+    coeff: 2e-4
     pnorm: 2.0
     p_anneal_start_frac: 0.0
     p_anneal_end_frac: 1
@@ -90,7 +90,7 @@ eval_metric_configs:
   - classname: "MaskingPatternEval"
     D: 64
     d: 8
-    cos_sim_threshold: 0.9
+    cos_sim_threshold: 0.75
     ci_threshold: 0.1
 
 # --- Pretrained model info ---
