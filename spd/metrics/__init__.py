@@ -51,3 +51,4 @@ from .stochastic_recon_subset_loss import (
 from .unmasked_recon_loss import UnmaskedReconLoss as UnmaskedReconLoss
 from .unmasked_recon_loss import unmasked_recon_loss as unmasked_recon_loss
 from .uv_plots import UVPlots as UVPlots
+from .masking_pattern_eval import MaskingPatternEval as MaskingPatternEval

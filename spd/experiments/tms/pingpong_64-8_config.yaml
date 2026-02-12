@@ -28,7 +28,7 @@ loss_metric_configs:
   - classname: "FaithfulnessLoss"
     coeff: 5.0
   - classname: "ImportanceMinimalityLoss"
-    coeff: 1e-4
+    coeff: 5e-4
     pnorm: 2.0
     p_anneal_start_frac: 0.0
     p_anneal_end_frac: 1
@@ -86,6 +86,12 @@ eval_metric_configs:
     n_steps: 20
     mask_scope: "shared_across_batch"
   - classname: "UnmaskedReconLoss"
+  - classname: StochasticHiddenActsReconLoss
+  - classname: "MaskingPatternEval"
+    D: 64
+    d: 8
+    cos_sim_threshold: 0.9
+    ci_threshold: 0.1
 
 # --- Pretrained model info ---
 pretrained_model_class: "spd.experiments.tms.bss_models.PingPongModel"

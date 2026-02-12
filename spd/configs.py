@@ -372,6 +372,16 @@ class UVPlotsConfig(BaseConfig):
     dense_patterns: list[str] | None
 
 
+class MaskingPatternEvalConfig(BaseConfig):
+    """Config for PingPong masking pattern evaluation."""
+
+    classname: Literal["MaskingPatternEval"] = "MaskingPatternEval"
+    D: int
+    d: int
+    cos_sim_threshold: float = 0.9
+    ci_threshold: float = 0.1
+
+
 ReconLossConfigType = (
     UnmaskedReconLossConfig
     | CIMaskedReconLossConfig
@@ -405,6 +415,7 @@ EvalOnlyMetricConfigType = (
     | StochasticReconSubsetCEAndKLConfig
     | PGDMultiBatchReconLossConfig
     | PGDMultiBatchReconSubsetLossConfig
+    | MaskingPatternEvalConfig
 )
 MetricConfigType = LossMetricConfigType | EvalOnlyMetricConfigType
 

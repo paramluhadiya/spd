@@ -23,6 +23,7 @@ from spd.configs import (
     IdentityCIErrorConfig,
     ThresholdFaithfulnessLossConfig,
     ImportanceMinimalityLossConfig,
+    MaskingPatternEvalConfig,
     MetricConfigType,
     PermutedCIPlotsConfig,
     PGDMultiBatchReconLossConfig,
@@ -62,6 +63,7 @@ from spd.metrics.stochastic_recon_loss import StochasticReconLoss
 from spd.metrics.stochastic_recon_subset_ce_and_kl import StochasticReconSubsetCEAndKL
 from spd.metrics.stochastic_recon_subset_loss import StochasticReconSubsetLoss
 from spd.metrics.uv_plots import UVPlots
+from spd.metrics.masking_pattern_eval import MaskingPatternEval
 from spd.models.component_model import ComponentModel, OutputWithCache
 from spd.routing import AllLayersRouter, get_subset_router
 from spd.utils.distributed_utils import avg_metrics_across_ranks, is_distributed
@@ -279,6 +281,15 @@ def init_metric(
                 model=model,
                 device=device,
                 output_loss_type=run_config.output_loss_type,
+            )
+        case MaskingPatternEvalConfig():
+            metric = MaskingPatternEval(
+                model=model,
+                device=device,
+                D=cfg.D,
+                d=cfg.d,
+                cos_sim_threshold=cfg.cos_sim_threshold,
+                ci_threshold=cfg.ci_threshold,
             )
 
         case _:

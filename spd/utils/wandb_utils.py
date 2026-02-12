@@ -67,6 +67,7 @@ METRIC_CONFIG_SHORT_NAMES: dict[str, str] = {
     "StochasticReconSubsetCEAndKL": "StochReconSubCEKL",
     "PGDMultiBatchReconLoss": "PGDMultiBatchRecon",
     "PGDMultiBatchReconSubsetLoss": "PGDMultiBatchReconSub",
+    "MaskingPatternEval": "MaskPatEval",
 }
 
 
