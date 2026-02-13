@@ -71,7 +71,7 @@ class PingPongDataset(Dataset[Tensor]):
         # Fill x_block: put random values in block i for each sample (vectorized)
         values = torch.rand(batch_size, d, device=self.device) * (max_val - min_val) + min_val
         block_starts = d * i_indices  # (batch_size,)
-        col_indices = block_starts.unsqueeze(1) + torch.arange(d, device=self.device)  # (batch_size, d)
+        col_indices = block_starts.unsqueeze(1) + torch.arange(d, device=self.device).unsqueeze(0)  # (batch_size, d)
         x.scatter_(dim=1, index=col_indices, src=values)
 
         # Fill one_hot_i and one_hot_j using advanced indexing

@@ -103,7 +103,7 @@ if __name__ == "__main__":
         bss_model_config=BSSModelConfig(
             D=args.D,
             d=args.d,
-            B=10.0,  # Small enough to not dominate SPD losses, large enough to suppress after ReLU
+            B=15.0,  # Large enough to suppress max pre-activations (~13) with headroom
             device=device,
             n_layers=args.n_layers,
             model_type=args.model_type,

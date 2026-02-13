@@ -90,7 +90,7 @@ eval_metric_configs:
   - classname: "MaskingPatternEval"
     D: 64
     d: 8
-    cos_sim_threshold: 0.75
+    cos_sim_threshold: 0.85
     ci_threshold: 0.1
 
 # --- Pretrained model info ---

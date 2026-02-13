@@ -18,16 +18,16 @@ For each input with indices (i, j), and for each layer:
 1. **Find firing components**: Select components with CI > `ci_threshold` for this specific input
 2. **Find aligned components**: Among firing components, find those whose V has cosine similarity > `cos_sim_threshold` with the relevant one-hot vector (one_hot_j for even layers, one_hot_i for odd)
 3. **Build virtual masking component**: Sum the U vectors of all firing + aligned components
-4. **Evaluate the pattern**: Check if the virtual U has the correct structure — the active block should have the highest mean value, all other blocks should be suppressed (large negative)
+4. **Evaluate the pattern**: Check if the virtual U has the correct structure — the active block's worst-case (min) neuron should exceed the worst-case (max) leak from any suppressed block
 
 ## Metrics
 
 | Metric | Description |
 |--------|-------------|
 | `coverage` | Fraction of inputs where at least one firing + aligned component was found |
-| `pattern_accuracy` | Of inputs with found components, fraction where argmax of block means is the correct active block |
-| `suppression_strength` | Mean magnitude of negative values in suppressed blocks (higher = stronger masking) |
-| `margin` | Mean(active block) - Mean(suppressed blocks) (higher = cleaner separation) |
+| `pattern_accuracy` | Of inputs with found components, fraction where min(active block) > max(suppressed blocks) — worst-case correct masking |
+| `suppression_strength` | Mean of (-max) across suppressed blocks (higher = more negative = stronger masking) |
+| `margin` | min(active block) - max(suppressed blocks) (higher = cleaner worst-case separation) |
 
 All metrics are reported per-layer (`*_model.0`, `*_model.2`, `*_model.4`) and averaged across the model (`*_model`).
 
@@ -38,7 +38,7 @@ eval_metric_configs:
   - classname: "MaskingPatternEval"
     D: 64                    # Network width
     d: 8                     # Block width
-    cos_sim_threshold: 0.9   # Min cosine similarity for V alignment
+    cos_sim_threshold: 0.75  # Min cosine similarity for V alignment
     ci_threshold: 0.1        # Min CI for component to be considered firing
 ```
 
