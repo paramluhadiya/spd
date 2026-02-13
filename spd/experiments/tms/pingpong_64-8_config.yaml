@@ -34,8 +34,8 @@ loss_metric_configs:
     p_anneal_end_frac: 1
     p_anneal_final_p: 0.4
     beta: 0
-  # - classname: "StochasticReconLoss"
-  #   coeff: 1.0
+  - classname: "StochasticReconLoss"
+    coeff: 1.0
   - classname: "PGDReconSubsetLoss"
     coeff: 1
     init: "ones"
@@ -51,8 +51,8 @@ loss_metric_configs:
 output_loss_type: mse
 
 # --- Training ---
-batch_size: 4096
-eval_batch_size: 4096
+batch_size: 8192
+eval_batch_size: 8192
 steps: 100000
 lr_schedule:
   start_val: 1e-3
