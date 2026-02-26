@@ -79,15 +79,18 @@ def launch_slurm_run(
     snapshot_branch, commit_hash = create_git_snapshot(run_id=run_id)
     logger.info(f"Created git snapshot branch: {snapshot_branch} ({commit_hash[:8]})")
 
-    _wandb_setup(
-        create_report=create_report,
-        report_title=report_title,
-        project=project,
-        run_id=run_id,
-        experiments_list=experiments_list,
-        snapshot_branch=snapshot_branch,
-        commit_hash=commit_hash,
-    )
+    try:
+        _wandb_setup(
+            create_report=create_report,
+            report_title=report_title,
+            project=project,
+            run_id=run_id,
+            experiments_list=experiments_list,
+            snapshot_branch=snapshot_branch,
+            commit_hash=commit_hash,
+        )
+    except Exception as e:
+        logger.warning(f"Failed to create W&B workspace view/report: {e}. Continuing anyway.")
 
     slurm_job_name = f"spd-{job_suffix or get_max_expected_runtime(experiments_list)}"
 

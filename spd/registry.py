@@ -60,10 +60,10 @@ EXPERIMENT_REGISTRY: dict[str, ExperimentConfig] = {
         expected_runtime=5,
         canonical_run="wandb:goodfire/spd/runs/eobwic8t",
     ),
-    "bss_64-8": ExperimentConfig(
-        task_name="bss",
-        decomp_script=Path("spd/experiments/tms/bss_decomposition.py"),
-        config_path=Path("spd/experiments/tms/bss_64-8_config.yaml"),
+    "pingpong_64-8": ExperimentConfig(
+        task_name="pingpong",
+        decomp_script=Path("spd/experiments/tms/pingpong_decomposition.py"),
+        config_path=Path("spd/experiments/tms/pingpong_64-8_config.yaml"),
         expected_runtime=10,
         canonical_run=None,
     ),
