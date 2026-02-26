@@ -52,8 +52,8 @@ loss_metric_configs:
 output_loss_type: mse
 
 # --- Training ---
-batch_size: 8192
-eval_batch_size: 8192
+batch_size: 4096
+eval_batch_size: 4096
 steps: 100000
 lr_schedule:
   start_val: 1e-3
