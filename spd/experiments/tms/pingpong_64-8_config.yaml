@@ -28,12 +28,12 @@ loss_metric_configs:
   - classname: "FaithfulnessLoss"
     coeff: 5.0
   - classname: "ImportanceMinimalityLoss"
-    coeff: 2e-4
+    coeff: 1e-4  # NOTE: when beta=0, 2e-4 worked pretty well for 4096 batch size. 
     pnorm: 2.0
     p_anneal_start_frac: 0.0
     p_anneal_end_frac: 1
     p_anneal_final_p: 0.4
-    beta: 0 #TODO change this. We want to have nonzero beta. Might try this with beta = +inf by changing the minimality loss to only keep beta term. 
+    beta: 0.16 #TODO change this. We want to have nonzero beta. Might try this with beta = +inf by changing the minimality loss to only keep beta term. 
   # - classname: "StochasticReconLoss"
   #   coeff: 1.0
   # Removing stochastic recon loss made the decomposition more sensible. 
