@@ -16,7 +16,13 @@ from .faithfulness_loss import FaithfulnessLoss as FaithfulnessLoss
 from .faithfulness_loss import faithfulness_loss as faithfulness_loss
 from .faithfulness_loss import threshold_faithfulness_loss as threshold_faithfulness_loss
 from .identity_ci_error import IdentityCIError as IdentityCIError
+from .importance_minimality_loss import (
+    BetaInfImportanceMinimalityLoss as BetaInfImportanceMinimalityLoss,
+)
 from .importance_minimality_loss import ImportanceMinimalityLoss as ImportanceMinimalityLoss
+from .importance_minimality_loss import (
+    beta_inf_importance_minimality_loss as beta_inf_importance_minimality_loss,
+)
 from .importance_minimality_loss import importance_minimality_loss as importance_minimality_loss
 from .permuted_ci_plots import PermutedCIPlots as PermutedCIPlots
 from .pgd_masked_recon_layerwise_loss import PGDReconLayerwiseLoss as PGDReconLayerwiseLoss

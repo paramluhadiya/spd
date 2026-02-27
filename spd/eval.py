@@ -22,6 +22,7 @@ from spd.configs import (
     FaithfulnessLossConfig,
     IdentityCIErrorConfig,
     ThresholdFaithfulnessLossConfig,
+    BetaInfImportanceMinimalityLossConfig,
     ImportanceMinimalityLossConfig,
     MaskingPatternEvalConfig,
     MetricConfigType,
@@ -51,6 +52,7 @@ from spd.metrics.ci_mean_per_component import CIMeanPerComponent
 from spd.metrics.component_activation_density import ComponentActivationDensity
 from spd.metrics.faithfulness_loss import FaithfulnessLoss
 from spd.metrics.identity_ci_error import IdentityCIError
+from spd.metrics.importance_minimality_loss import BetaInfImportanceMinimalityLoss
 from spd.metrics.importance_minimality_loss import ImportanceMinimalityLoss
 from spd.metrics.permuted_ci_plots import PermutedCIPlots
 from spd.metrics.pgd_masked_recon_layerwise_loss import PGDReconLayerwiseLoss
@@ -132,6 +134,15 @@ def init_metric(
                 device=device,
                 pnorm=cfg.pnorm,
                 beta=cfg.beta,
+                p_anneal_start_frac=cfg.p_anneal_start_frac,
+                p_anneal_final_p=cfg.p_anneal_final_p,
+                p_anneal_end_frac=cfg.p_anneal_end_frac,
+            )
+        case BetaInfImportanceMinimalityLossConfig():
+            metric = BetaInfImportanceMinimalityLoss(
+                model=model,
+                device=device,
+                pnorm=cfg.pnorm,
                 p_anneal_start_frac=cfg.p_anneal_start_frac,
                 p_anneal_final_p=cfg.p_anneal_final_p,
                 p_anneal_end_frac=cfg.p_anneal_end_frac,

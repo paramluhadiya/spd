@@ -44,6 +44,7 @@ METRIC_CONFIG_SHORT_NAMES: dict[str, str] = {
     "FaithfulnessLoss": "Faith",
     "ThresholdFaithfulnessLoss": "ThreshFaith",
     "ImportanceMinimalityLoss": "ImpMin",
+    "BetaInfImportanceMinimalityLoss": "BetaInfImpMin",
     "StochasticReconLoss": "StochRecon",
     "StochasticReconSubsetLoss": "StochReconSub",
     "StochasticReconLayerwiseLoss": "StochReconLayer",
