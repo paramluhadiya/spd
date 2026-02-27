@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
+from spd.experiments.tms.bss_models import PingPongModel
 from spd.experiments.tms.pingpong_decomposition import PingPongDataset
 from spd.models.component_model import ComponentModel, SPDRunInfo
 
@@ -36,6 +37,7 @@ def main() -> None:
     model.eval()
 
     target_model = model.target_model
+    assert isinstance(target_model, PingPongModel)
     D = target_model.D
     num_blocks = target_model.num_blocks
 
@@ -69,7 +71,7 @@ def main() -> None:
                 n_above += (layer_ci > args.threshold).float().sum(dim=-1)
 
             for idx in range(args.batch_size):
-                i, j = i_indices[idx].item(), j_indices[idx].item()
+                i, j = int(i_indices[idx].item()), int(j_indices[idx].item())
                 counts_per_circuit[(i, j)].append(n_above[idx].item())
 
     # Compute mean and std per circuit
