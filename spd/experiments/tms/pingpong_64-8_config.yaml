@@ -1,8 +1,7 @@
 # PingPong 64-8 (D=64, d=8, T=64 circuits, 3 layers)
 # --- WandB ---
 wandb_project: spd
-wandb_run_name: 4096-beta-inf-smaller-minimality-coeff
-wandb_run_name_prefix: ""
+wandb_run_name: 4096-polynomial-beta-balanced
 
 # --- General ---
 seed: 0
@@ -27,9 +26,11 @@ use_delta_component: true
 loss_metric_configs:
   - classname: "FaithfulnessLoss"
     coeff: 5.0
-  - classname: "BetaInfImportanceMinimalityLoss"
-    coeff: 1.6e-5  # 2e-4 / log2(1 + 10*4096/528) ≈ 2e-4 / 6.27
+  - classname: "PolynomialImportanceMinimalityLoss"
+    coeff: 1e-4  # 2e-4 / log2(1 + 10*4096/528) ≈ 2e-4 / 6.27
     pnorm: 2.0
+    beta: 0.645
+    power: 1e-1
     p_anneal_start_frac: 0.0
     p_anneal_end_frac: 1
     p_anneal_final_p: 0.4
