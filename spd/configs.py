@@ -232,6 +232,31 @@ class BetaInfImportanceMinimalityLossConfig(LossMetricConfig):
     eps: NonNegativeFloat = 1e-12
 
 
+class PolynomialImportanceMinimalityLossConfig(LossMetricConfig):
+    classname: Literal["PolynomialImportanceMinimalityLoss"] = (
+        "PolynomialImportanceMinimalityLoss"
+    )
+    pnorm: NonNegativeFloat
+    beta: NonNegativeFloat
+    power: float
+    p_anneal_start_frac: Probability = 1.0
+    p_anneal_final_p: NonNegativeFloat | None = None
+    p_anneal_end_frac: Probability = 1.0
+    eps: NonNegativeFloat = 1e-12
+
+
+class BetaInfPolynomialImportanceMinimalityLossConfig(LossMetricConfig):
+    classname: Literal["BetaInfPolynomialImportanceMinimalityLoss"] = (
+        "BetaInfPolynomialImportanceMinimalityLoss"
+    )
+    pnorm: NonNegativeFloat
+    power: float
+    p_anneal_start_frac: Probability = 1.0
+    p_anneal_final_p: NonNegativeFloat | None = None
+    p_anneal_end_frac: Probability = 1.0
+    eps: NonNegativeFloat = 1e-12
+
+
 class UniformKSubsetRoutingConfig(BaseConfig):
     type: Literal["uniform_k_subset"] = "uniform_k_subset"
 
@@ -410,6 +435,8 @@ LossMetricConfigType = (
     | ThresholdFaithfulnessLossConfig
     | ImportanceMinimalityLossConfig
     | BetaInfImportanceMinimalityLossConfig
+    | PolynomialImportanceMinimalityLossConfig
+    | BetaInfPolynomialImportanceMinimalityLossConfig
     | ReconLossConfigType
 )
 

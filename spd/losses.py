@@ -6,6 +6,7 @@ from torch import Tensor
 
 from spd.configs import (
     BetaInfImportanceMinimalityLossConfig,
+    BetaInfPolynomialImportanceMinimalityLossConfig,
     CIMaskedReconLayerwiseLossConfig,
     CIMaskedReconLossConfig,
     CIMaskedReconSubsetLossConfig,
@@ -15,6 +16,7 @@ from spd.configs import (
     PGDReconLayerwiseLossConfig,
     PGDReconLossConfig,
     PGDReconSubsetLossConfig,
+    PolynomialImportanceMinimalityLossConfig,
     SamplingType,
     StochasticHiddenActsReconLossConfig,
     StochasticReconLayerwiseLossConfig,
@@ -25,6 +27,7 @@ from spd.configs import (
 )
 from spd.metrics import (
     beta_inf_importance_minimality_loss,
+    beta_inf_polynomial_importance_minimality_loss,
     ci_masked_recon_layerwise_loss,
     ci_masked_recon_loss,
     ci_masked_recon_subset_loss,
@@ -33,6 +36,7 @@ from spd.metrics import (
     pgd_recon_layerwise_loss,
     pgd_recon_loss,
     pgd_recon_subset_loss,
+    polynomial_importance_minimality_loss,
     stochastic_hidden_acts_recon_loss,
     stochastic_recon_layerwise_loss,
     stochastic_recon_loss,
@@ -91,6 +95,29 @@ def compute_total_loss(
                     ci_upper_leaky=ci.upper_leaky,
                     current_frac_of_training=current_frac_of_training,
                     pnorm=cfg.pnorm,
+                    eps=cfg.eps,
+                    p_anneal_start_frac=cfg.p_anneal_start_frac,
+                    p_anneal_final_p=cfg.p_anneal_final_p,
+                    p_anneal_end_frac=cfg.p_anneal_end_frac,
+                )
+            case PolynomialImportanceMinimalityLossConfig():
+                loss = polynomial_importance_minimality_loss(
+                    ci_upper_leaky=ci.upper_leaky,
+                    current_frac_of_training=current_frac_of_training,
+                    pnorm=cfg.pnorm,
+                    beta=cfg.beta,
+                    power=cfg.power,
+                    eps=cfg.eps,
+                    p_anneal_start_frac=cfg.p_anneal_start_frac,
+                    p_anneal_final_p=cfg.p_anneal_final_p,
+                    p_anneal_end_frac=cfg.p_anneal_end_frac,
+                )
+            case BetaInfPolynomialImportanceMinimalityLossConfig():
+                loss = beta_inf_polynomial_importance_minimality_loss(
+                    ci_upper_leaky=ci.upper_leaky,
+                    current_frac_of_training=current_frac_of_training,
+                    pnorm=cfg.pnorm,
+                    power=cfg.power,
                     eps=cfg.eps,
                     p_anneal_start_frac=cfg.p_anneal_start_frac,
                     p_anneal_final_p=cfg.p_anneal_final_p,

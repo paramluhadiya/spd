@@ -19,11 +19,24 @@ from .identity_ci_error import IdentityCIError as IdentityCIError
 from .importance_minimality_loss import (
     BetaInfImportanceMinimalityLoss as BetaInfImportanceMinimalityLoss,
 )
+from .importance_minimality_loss import (
+    BetaInfPolynomialImportanceMinimalityLoss as BetaInfPolynomialImportanceMinimalityLoss,
+)
 from .importance_minimality_loss import ImportanceMinimalityLoss as ImportanceMinimalityLoss
+from .importance_minimality_loss import (
+    PolynomialImportanceMinimalityLoss as PolynomialImportanceMinimalityLoss,
+)
 from .importance_minimality_loss import (
     beta_inf_importance_minimality_loss as beta_inf_importance_minimality_loss,
 )
+from .importance_minimality_loss import (
+    beta_inf_polynomial_importance_minimality_loss as beta_inf_polynomial_importance_minimality_loss,
+)
 from .importance_minimality_loss import importance_minimality_loss as importance_minimality_loss
+from .importance_minimality_loss import (
+    polynomial_importance_minimality_loss as polynomial_importance_minimality_loss,
+)
+from .masking_pattern_eval import MaskingPatternEval as MaskingPatternEval
 from .permuted_ci_plots import PermutedCIPlots as PermutedCIPlots
 from .pgd_masked_recon_layerwise_loss import PGDReconLayerwiseLoss as PGDReconLayerwiseLoss
 from .pgd_masked_recon_layerwise_loss import (
@@ -57,4 +70,3 @@ from .stochastic_recon_subset_loss import (
 from .unmasked_recon_loss import UnmaskedReconLoss as UnmaskedReconLoss
 from .unmasked_recon_loss import unmasked_recon_loss as unmasked_recon_loss
 from .uv_plots import UVPlots as UVPlots
-from .masking_pattern_eval import MaskingPatternEval as MaskingPatternEval

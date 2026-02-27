@@ -128,6 +128,44 @@ def _beta_inf_importance_minimality_loss_compute(
     return total_loss
 
 
+def _polynomial_importance_minimality_loss_compute(
+    per_component_sums: dict[str, Float[Tensor, " C"]],
+    n_examples: int,
+    beta: float,
+    power: float,
+) -> Float[Tensor, ""]:
+    """Compute importance minimality loss using n^power instead of log(1 + n).
+
+    For each layer: (per_component_mean + beta * per_component_mean * layer_sums^power).sum()
+    """
+    total_loss = torch.tensor(0.0, device=next(iter(per_component_sums.values())).device)
+    for layer_sums in per_component_sums.values():
+        per_component_mean = layer_sums / n_examples
+        layer_loss = (
+            per_component_mean + beta * per_component_mean * layer_sums**power
+        ).sum()
+        total_loss += layer_loss
+    return total_loss
+
+
+def _beta_inf_polynomial_importance_minimality_loss_compute(
+    per_component_sums: dict[str, Float[Tensor, " C"]],
+    n_examples: int,
+    power: float,
+) -> Float[Tensor, ""]:
+    """Compute beta -> infinity polynomial importance minimality loss.
+
+    Uses per_component_mean * layer_sums^power instead of per_component_mean * log2(1 + layer_sums).
+    The coefficient on this loss absorbs what would have been beta.
+    """
+    total_loss = torch.tensor(0.0, device=next(iter(per_component_sums.values())).device)
+    for layer_sums in per_component_sums.values():
+        per_component_mean = layer_sums / n_examples
+        layer_loss = (per_component_mean * layer_sums**power).sum()
+        total_loss += layer_loss
+    return total_loss
+
+
 def importance_minimality_loss(
     ci_upper_leaky: dict[str, Float[Tensor, "... C"]],
     current_frac_of_training: float,
@@ -332,4 +370,199 @@ class BetaInfImportanceMinimalityLoss(Metric):
         return _beta_inf_importance_minimality_loss_compute(
             per_component_sums=reduced_sums,
             n_examples=n_examples,
+        )
+
+
+def polynomial_importance_minimality_loss(
+    ci_upper_leaky: dict[str, Float[Tensor, "... C"]],
+    current_frac_of_training: float,
+    eps: float,
+    pnorm: float,
+    beta: float,
+    power: float,
+    p_anneal_start_frac: float,
+    p_anneal_final_p: float | None,
+    p_anneal_end_frac: float,
+) -> Float[Tensor, ""]:
+    """Compute polynomial importance minimality loss using n^power instead of log(1 + n)."""
+    per_component_sums, n_examples = _importance_minimality_loss_update(
+        ci_upper_leaky=ci_upper_leaky,
+        pnorm=pnorm,
+        eps=eps,
+        p_anneal_start_frac=p_anneal_start_frac,
+        p_anneal_final_p=p_anneal_final_p,
+        p_anneal_end_frac=p_anneal_end_frac,
+        current_frac_of_training=current_frac_of_training,
+    )
+    return _polynomial_importance_minimality_loss_compute(
+        per_component_sums=per_component_sums,
+        n_examples=n_examples,
+        beta=beta,
+        power=power,
+    )
+
+
+class PolynomialImportanceMinimalityLoss(Metric):
+    """Importance minimality loss using n^power instead of log(1 + n).
+
+    For each layer: (per_component_mean + beta * per_component_mean * layer_sums^power).sum()
+    """
+
+    metric_section: ClassVar[str] = "loss"
+
+    def __init__(
+        self,
+        model: ComponentModel,
+        device: str,
+        pnorm: float,
+        beta: float,
+        power: float,
+        p_anneal_start_frac: float = 1.0,
+        p_anneal_final_p: float | None = None,
+        p_anneal_end_frac: float = 1.0,
+        eps: float = 1e-12,
+    ) -> None:
+        self.pnorm = pnorm
+        self.beta = beta
+        self.power = power
+        self.eps = eps
+        self.p_anneal_start_frac = p_anneal_start_frac
+        self.p_anneal_final_p = p_anneal_final_p
+        self.p_anneal_end_frac = p_anneal_end_frac
+        self.device = device
+        self.per_component_sums: dict[str, Float[Tensor, " C"]] = {}
+        self.n_examples = torch.tensor(0, device=device)
+
+    @override
+    def update(
+        self,
+        *,
+        ci: CIOutputs,
+        current_frac_of_training: float,
+        **_: Any,
+    ) -> None:
+        per_component_sums, n_examples = _importance_minimality_loss_update(
+            ci_upper_leaky=ci.upper_leaky,
+            pnorm=self.pnorm,
+            eps=self.eps,
+            current_frac_of_training=current_frac_of_training,
+            p_anneal_start_frac=self.p_anneal_start_frac,
+            p_anneal_final_p=self.p_anneal_final_p,
+            p_anneal_end_frac=self.p_anneal_end_frac,
+        )
+        for layer_name, layer_sums in per_component_sums.items():
+            if layer_name not in self.per_component_sums:
+                self.per_component_sums[layer_name] = torch.zeros_like(layer_sums)
+            self.per_component_sums[layer_name] += layer_sums
+        self.n_examples += n_examples
+
+    @override
+    def compute(self) -> Float[Tensor, ""]:
+        reduced_sums: dict[str, Float[Tensor, " C"]] = {}
+        for layer_name, layer_sums in self.per_component_sums.items():
+            reduced_sums[layer_name] = all_reduce(layer_sums, op=ReduceOp.SUM)
+        n_examples = int(all_reduce(self.n_examples, op=ReduceOp.SUM))
+
+        return _polynomial_importance_minimality_loss_compute(
+            per_component_sums=reduced_sums,
+            n_examples=n_examples,
+            beta=self.beta,
+            power=self.power,
+        )
+
+
+def beta_inf_polynomial_importance_minimality_loss(
+    ci_upper_leaky: dict[str, Float[Tensor, "... C"]],
+    current_frac_of_training: float,
+    eps: float,
+    pnorm: float,
+    power: float,
+    p_anneal_start_frac: float,
+    p_anneal_final_p: float | None,
+    p_anneal_end_frac: float,
+) -> Float[Tensor, ""]:
+    """Compute beta -> infinity polynomial importance minimality loss.
+
+    Uses per_component_mean * layer_sums^power instead of per_component_mean * log2(1 + layer_sums).
+    """
+    per_component_sums, n_examples = _importance_minimality_loss_update(
+        ci_upper_leaky=ci_upper_leaky,
+        pnorm=pnorm,
+        eps=eps,
+        p_anneal_start_frac=p_anneal_start_frac,
+        p_anneal_final_p=p_anneal_final_p,
+        p_anneal_end_frac=p_anneal_end_frac,
+        current_frac_of_training=current_frac_of_training,
+    )
+    return _beta_inf_polynomial_importance_minimality_loss_compute(
+        per_component_sums=per_component_sums,
+        n_examples=n_examples,
+        power=power,
+    )
+
+
+class BetaInfPolynomialImportanceMinimalityLoss(Metric):
+    """Beta -> infinity polynomial importance minimality loss.
+
+    Uses per_component_mean * layer_sums^power instead of per_component_mean * log2(1 + layer_sums).
+    The coeff on this loss absorbs the role of beta.
+    """
+
+    metric_section: ClassVar[str] = "loss"
+
+    def __init__(
+        self,
+        model: ComponentModel,
+        device: str,
+        pnorm: float,
+        power: float,
+        p_anneal_start_frac: float = 1.0,
+        p_anneal_final_p: float | None = None,
+        p_anneal_end_frac: float = 1.0,
+        eps: float = 1e-12,
+    ) -> None:
+        self.pnorm = pnorm
+        self.power = power
+        self.eps = eps
+        self.p_anneal_start_frac = p_anneal_start_frac
+        self.p_anneal_final_p = p_anneal_final_p
+        self.p_anneal_end_frac = p_anneal_end_frac
+        self.device = device
+        self.per_component_sums: dict[str, Float[Tensor, " C"]] = {}
+        self.n_examples = torch.tensor(0, device=device)
+
+    @override
+    def update(
+        self,
+        *,
+        ci: CIOutputs,
+        current_frac_of_training: float,
+        **_: Any,
+    ) -> None:
+        per_component_sums, n_examples = _importance_minimality_loss_update(
+            ci_upper_leaky=ci.upper_leaky,
+            pnorm=self.pnorm,
+            eps=self.eps,
+            current_frac_of_training=current_frac_of_training,
+            p_anneal_start_frac=self.p_anneal_start_frac,
+            p_anneal_final_p=self.p_anneal_final_p,
+            p_anneal_end_frac=self.p_anneal_end_frac,
+        )
+        for layer_name, layer_sums in per_component_sums.items():
+            if layer_name not in self.per_component_sums:
+                self.per_component_sums[layer_name] = torch.zeros_like(layer_sums)
+            self.per_component_sums[layer_name] += layer_sums
+        self.n_examples += n_examples
+
+    @override
+    def compute(self) -> Float[Tensor, ""]:
+        reduced_sums: dict[str, Float[Tensor, " C"]] = {}
+        for layer_name, layer_sums in self.per_component_sums.items():
+            reduced_sums[layer_name] = all_reduce(layer_sums, op=ReduceOp.SUM)
+        n_examples = int(all_reduce(self.n_examples, op=ReduceOp.SUM))
+
+        return _beta_inf_polynomial_importance_minimality_loss_compute(
+            per_component_sums=reduced_sums,
+            n_examples=n_examples,
+            power=self.power,
         )

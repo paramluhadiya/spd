@@ -10,6 +10,7 @@ from torch.types import Number
 from wandb.plot.custom_chart import CustomChart
 
 from spd.configs import (
+    BetaInfImportanceMinimalityLossConfig,
     CEandKLLossesConfig,
     CI_L0Config,
     CIHistogramsConfig,
@@ -21,8 +22,6 @@ from spd.configs import (
     Config,
     FaithfulnessLossConfig,
     IdentityCIErrorConfig,
-    ThresholdFaithfulnessLossConfig,
-    BetaInfImportanceMinimalityLossConfig,
     ImportanceMinimalityLossConfig,
     MaskingPatternEvalConfig,
     MetricConfigType,
@@ -37,6 +36,7 @@ from spd.configs import (
     StochasticReconLossConfig,
     StochasticReconSubsetCEAndKLConfig,
     StochasticReconSubsetLossConfig,
+    ThresholdFaithfulnessLossConfig,
     UnmaskedReconLossConfig,
     UVPlotsConfig,
 )
@@ -52,8 +52,11 @@ from spd.metrics.ci_mean_per_component import CIMeanPerComponent
 from spd.metrics.component_activation_density import ComponentActivationDensity
 from spd.metrics.faithfulness_loss import FaithfulnessLoss
 from spd.metrics.identity_ci_error import IdentityCIError
-from spd.metrics.importance_minimality_loss import BetaInfImportanceMinimalityLoss
-from spd.metrics.importance_minimality_loss import ImportanceMinimalityLoss
+from spd.metrics.importance_minimality_loss import (
+    BetaInfImportanceMinimalityLoss,
+    ImportanceMinimalityLoss,
+)
+from spd.metrics.masking_pattern_eval import MaskingPatternEval
 from spd.metrics.permuted_ci_plots import PermutedCIPlots
 from spd.metrics.pgd_masked_recon_layerwise_loss import PGDReconLayerwiseLoss
 from spd.metrics.pgd_masked_recon_loss import PGDReconLoss
@@ -65,7 +68,6 @@ from spd.metrics.stochastic_recon_loss import StochasticReconLoss
 from spd.metrics.stochastic_recon_subset_ce_and_kl import StochasticReconSubsetCEAndKL
 from spd.metrics.stochastic_recon_subset_loss import StochasticReconSubsetLoss
 from spd.metrics.uv_plots import UVPlots
-from spd.metrics.masking_pattern_eval import MaskingPatternEval
 from spd.models.component_model import ComponentModel, OutputWithCache
 from spd.routing import AllLayersRouter, get_subset_router
 from spd.utils.distributed_utils import avg_metrics_across_ranks, is_distributed
