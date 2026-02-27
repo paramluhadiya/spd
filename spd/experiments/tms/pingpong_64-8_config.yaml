@@ -27,13 +27,12 @@ use_delta_component: true
 loss_metric_configs:
   - classname: "FaithfulnessLoss"
     coeff: 5.0
-  - classname: "ImportanceMinimalityLoss"
-    coeff: 2e-4
+  - classname: "BetaInfImportanceMinimalityLoss"
+    coeff: 3.2e-5  # 2e-4 / log2(1 + 10*4096/528) ≈ 2e-4 / 6.27
     pnorm: 2.0
     p_anneal_start_frac: 0.0
     p_anneal_end_frac: 1
     p_anneal_final_p: 0.4
-    beta: 0 #TODO change this. We want to have nonzero beta. Might try this with beta = +inf by changing the minimality loss to only keep beta term. 
   # - classname: "StochasticReconLoss"
   #   coeff: 1.0
   # Removing stochastic recon loss made the decomposition more sensible. 
