@@ -28,7 +28,7 @@ loss_metric_configs:
   - classname: "FaithfulnessLoss"
     coeff: 5.0
   - classname: "ImportanceMinimalityLoss"
-    coeff: 1e-4  # NOTE: when beta=0, 2e-4 worked pretty well for 4096 batch size. 
+    coeff: 5e-5  # NOTE: when beta=0, 2e-4 worked pretty well for 4096 batch size. 
     pnorm: 2.0
     p_anneal_start_frac: 0.0
     p_anneal_end_frac: 1
