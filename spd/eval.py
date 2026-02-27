@@ -11,6 +11,7 @@ from wandb.plot.custom_chart import CustomChart
 
 from spd.configs import (
     BetaInfImportanceMinimalityLossConfig,
+    BetaInfPolynomialImportanceMinimalityLossConfig,
     CEandKLLossesConfig,
     CI_L0Config,
     CIHistogramsConfig,
@@ -24,6 +25,7 @@ from spd.configs import (
     IdentityCIErrorConfig,
     ImportanceMinimalityLossConfig,
     MaskingPatternEvalConfig,
+    PolynomialImportanceMinimalityLossConfig,
     MetricConfigType,
     PermutedCIPlotsConfig,
     PGDMultiBatchReconLossConfig,
@@ -54,7 +56,9 @@ from spd.metrics.faithfulness_loss import FaithfulnessLoss
 from spd.metrics.identity_ci_error import IdentityCIError
 from spd.metrics.importance_minimality_loss import (
     BetaInfImportanceMinimalityLoss,
+    BetaInfPolynomialImportanceMinimalityLoss,
     ImportanceMinimalityLoss,
+    PolynomialImportanceMinimalityLoss,
 )
 from spd.metrics.masking_pattern_eval import MaskingPatternEval
 from spd.metrics.permuted_ci_plots import PermutedCIPlots
@@ -136,6 +140,27 @@ def init_metric(
                 device=device,
                 pnorm=cfg.pnorm,
                 beta=cfg.beta,
+                p_anneal_start_frac=cfg.p_anneal_start_frac,
+                p_anneal_final_p=cfg.p_anneal_final_p,
+                p_anneal_end_frac=cfg.p_anneal_end_frac,
+            )
+        case PolynomialImportanceMinimalityLossConfig():
+            metric = PolynomialImportanceMinimalityLoss(
+                model=model,
+                device=device,
+                pnorm=cfg.pnorm,
+                beta=cfg.beta,
+                power=cfg.power,
+                p_anneal_start_frac=cfg.p_anneal_start_frac,
+                p_anneal_final_p=cfg.p_anneal_final_p,
+                p_anneal_end_frac=cfg.p_anneal_end_frac,
+            )
+        case BetaInfPolynomialImportanceMinimalityLossConfig():
+            metric = BetaInfPolynomialImportanceMinimalityLoss(
+                model=model,
+                device=device,
+                pnorm=cfg.pnorm,
+                power=cfg.power,
                 p_anneal_start_frac=cfg.p_anneal_start_frac,
                 p_anneal_final_p=cfg.p_anneal_final_p,
                 p_anneal_end_frac=cfg.p_anneal_end_frac,
