@@ -1,7 +1,7 @@
 # PingPong 64-8 (D=64, d=8, T=64 circuits, 3 layers)
 # --- WandB ---
 wandb_project: spd
-wandb_run_name: 8192-no-stochastic-recon
+wandb_run_name: 4096-beta-balanced
 wandb_run_name_prefix: ""
 
 # --- General ---
