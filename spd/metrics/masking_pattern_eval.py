@@ -118,16 +118,19 @@ class MaskingPatternEval(Metric):
 
         # Per-input alignment: gather the cos_sim row for each input's active block
         # cos_sims[active_blocks] -> (batch, C)
-        per_input_aligned = cos_sims[active_blocks] > self.cos_sim_threshold  # (batch, C)
+        per_input_cos_sims = cos_sims[active_blocks]  # (batch, C)
+        per_input_aligned = per_input_cos_sims.abs() > self.cos_sim_threshold  # (batch, C)
 
         # Per-input firing
         firing = layer_ci > self.ci_threshold  # (batch, C)
 
-        # Combined mask: firing AND aligned
-        mask = (firing & per_input_aligned).float()  # (batch, C)
+        # Combined mask: firing AND aligned, weighted by sign of cos_sim
+        # Sign-flip ensures negatively-aligned components contribute -U
+        selected = firing & per_input_aligned  # (batch, C)
+        mask = selected.float() * per_input_cos_sims.sign()  # (batch, C)
 
         # Inputs that have at least one matching component
-        has_components = mask.any(dim=1)  # (batch,)
+        has_components = selected.any(dim=1)  # (batch,)
         n_with_components = has_components.sum().item()
 
         if n_with_components == 0:
@@ -139,6 +142,7 @@ class MaskingPatternEval(Metric):
             }
 
         # Virtual U per input: (batch, C) @ (C, d_out) -> (batch, d_out)
+        # Sign-weighted so negatively-aligned V components contribute -U
         U_virtual = mask @ U  # (batch, d_out)
 
         # Reshape computing block to (batch, num_blocks, d)
