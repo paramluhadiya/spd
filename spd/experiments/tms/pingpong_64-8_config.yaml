@@ -17,18 +17,18 @@ sigmoid_type: "leaky_hard"
 # PingPong uses nn.Sequential, so layers are model.0, model.2, model.4 (Linear layers)
 module_info:
   - module_pattern: "model.0"
-    C: 600
+    C: 1200
   - module_pattern: "model.2"
-    C: 600
+    C: 1200
   - module_pattern: "model.4"
-    C: 600
+    C: 1200
 use_delta_component: true
 
 loss_metric_configs:
   - classname: "FaithfulnessLoss"
     coeff: 5.0
   - classname: "ImportanceMinimalityLoss"
-    coeff: 5e-5  # NOTE: when beta=0, 2e-4 worked pretty well for 4096 batch size. 
+    coeff: 1e-4  # NOTE: when beta=0, 2e-4 worked pretty well for 4096 batch size. 
     pnorm: 2.0
     p_anneal_start_frac: 0.0
     p_anneal_end_frac: 1
