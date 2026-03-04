@@ -48,8 +48,14 @@ def main() -> None:
         device=args.device,
     )
 
-    # Per-circuit counts: maps (i, j) -> list of n_above_threshold per sample
-    counts_per_circuit: dict[tuple[int, int], list[float]] = defaultdict(list)
+    layer_names = model.target_module_paths
+
+    # Per-circuit, per-layer counts: maps (layer, i, j) -> list of counts per sample
+    counts_per_layer_circuit: dict[str, dict[tuple[int, int], list[float]]] = {
+        name: defaultdict(list) for name in layer_names
+    }
+    # Also track totals
+    counts_total: dict[tuple[int, int], list[float]] = defaultdict(list)
 
     with torch.no_grad():
         for _ in range(args.n_batches):
@@ -65,29 +71,49 @@ def main() -> None:
                 sampling="continuous",
             )
 
-            # Sum CI > threshold across all layers and components for each sample
-            n_above = torch.zeros(args.batch_size, device=args.device)
-            for layer_ci in ci.upper_leaky.values():
-                n_above += (layer_ci > args.threshold).float().sum(dim=-1)
+            n_above_total = torch.zeros(args.batch_size, device=args.device)
+            per_layer_n_above: dict[str, torch.Tensor] = {}
+            for name, layer_ci in ci.upper_leaky.items():
+                n = (layer_ci > args.threshold).float().sum(dim=-1)
+                per_layer_n_above[name] = n
+                n_above_total += n
 
             for idx in range(args.batch_size):
                 i, j = int(i_indices[idx].item()), int(j_indices[idx].item())
-                counts_per_circuit[(i, j)].append(n_above[idx].item())
+                counts_total[(i, j)].append(n_above_total[idx].item())
+                for name in layer_names:
+                    counts_per_layer_circuit[name][(i, j)].append(
+                        per_layer_n_above[name][idx].item()
+                    )
 
-    # Compute mean and std per circuit
-    circuits = sorted(counts_per_circuit.keys())
+    circuits = sorted(counts_total.keys())
     labels = [f"({i},{j})" for i, j in circuits]
-    means = [np.mean(counts_per_circuit[c]) for c in circuits]
-    stds = [np.std(counts_per_circuit[c]) for c in circuits]
-
-    fig, ax = plt.subplots(figsize=(max(12, len(circuits) * 0.3), 6))
     x = np.arange(len(circuits))
-    ax.bar(x, means, yerr=stds, capsize=2, edgecolor="black", linewidth=0.5)
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels, rotation=90, fontsize=7)
-    ax.set_xlabel("Circuit (i, j)")
-    ax.set_ylabel(f"Mean # CI > {args.threshold}")
-    ax.set_title(f"Active subcomponents per circuit (threshold={args.threshold})")
+    n_plots = len(layer_names) + 1
+
+    fig, axes = plt.subplots(n_plots, 1, figsize=(max(12, len(circuits) * 0.3), 4 * n_plots))
+
+    # Total plot
+    means = [np.mean(counts_total[c]) for c in circuits]
+    stds = [np.std(counts_total[c]) for c in circuits]
+    axes[0].bar(x, means, yerr=stds, capsize=2, edgecolor="black", linewidth=0.5)
+    axes[0].set_xticks(x)
+    axes[0].set_xticklabels(labels, rotation=90, fontsize=7)
+    axes[0].set_ylabel(f"Mean # CI > {args.threshold}")
+    axes[0].set_title(f"Total active subcomponents per circuit (threshold={args.threshold})")
+
+    # Per-layer plots
+    for idx, name in enumerate(layer_names):
+        ax = axes[idx + 1]
+        layer_counts = counts_per_layer_circuit[name]
+        means = [np.mean(layer_counts[c]) for c in circuits]
+        stds = [np.std(layer_counts[c]) for c in circuits]
+        ax.bar(x, means, yerr=stds, capsize=2, edgecolor="black", linewidth=0.5)
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels, rotation=90, fontsize=7)
+        ax.set_ylabel(f"Mean # CI > {args.threshold}")
+        ax.set_title(f"{name}: active subcomponents per circuit")
+
     fig.tight_layout()
 
     if args.out:
