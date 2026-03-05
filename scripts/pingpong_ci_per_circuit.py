@@ -4,13 +4,14 @@ For each circuit type (i, j), computes the average number of CI values above a t
 across a set of input samples, then plots a histogram with error bars.
 
 Usage:
-    python scripts/pingpong_ci_per_circuit.py <model_path> [--n_batches 100] [--batch_size 256] [--threshold 0.5]
+    python scripts/pingpong_ci_per_circuit.py <model_path> [--n_batches 100] [--batch_size 256] [--threshold 0.9]
 
     model_path: wandb path or local path to a trained PingPong ComponentModel
 """
 
 import argparse
 from collections import defaultdict
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,6 +20,7 @@ import torch
 from spd.experiments.tms.bss_models import PingPongModel
 from spd.experiments.tms.pingpong_decomposition import PingPongDataset
 from spd.models.component_model import ComponentModel, SPDRunInfo
+from spd.settings import SPD_OUT_DIR
 
 
 def main() -> None:
@@ -26,9 +28,9 @@ def main() -> None:
     parser.add_argument("model_path", type=str)
     parser.add_argument("--n_batches", type=int, default=100)
     parser.add_argument("--batch_size", type=int, default=256)
-    parser.add_argument("--threshold", type=float, default=0.5)
+    parser.add_argument("--threshold", type=float, default=0.9)
     parser.add_argument("--device", type=str, default="cuda")
-    parser.add_argument("--out", type=str, default=None, help="Path to save figure")
+    parser.add_argument("--out", type=str, default=None, help="Path to save figure (default: spd_out/)")
     args = parser.parse_args()
 
     run_info = SPDRunInfo.from_path(args.model_path)
@@ -102,25 +104,32 @@ def main() -> None:
     axes[0].set_ylabel(f"Mean # CI > {args.threshold}")
     axes[0].set_title(f"Total active subcomponents per circuit (threshold={args.threshold})")
 
-    # Per-layer plots
+    # Per-layer plots with shared y-axis scale
+    layer_max_y = 0.0
+    layer_plot_data: list[tuple[list[float], list[float]]] = []
+    for name in layer_names:
+        layer_counts = counts_per_layer_circuit[name]
+        m = [np.mean(layer_counts[c]) for c in circuits]
+        s = [np.std(layer_counts[c]) for c in circuits]
+        layer_plot_data.append((m, s))
+        layer_max_y = max(layer_max_y, max(mi + si for mi, si in zip(m, s)))
+
     for idx, name in enumerate(layer_names):
         ax = axes[idx + 1]
-        layer_counts = counts_per_layer_circuit[name]
-        means = [np.mean(layer_counts[c]) for c in circuits]
-        stds = [np.std(layer_counts[c]) for c in circuits]
-        ax.bar(x, means, yerr=stds, capsize=2, edgecolor="black", linewidth=0.5)
+        m, s = layer_plot_data[idx]
+        ax.bar(x, m, yerr=s, capsize=2, edgecolor="black", linewidth=0.5)
         ax.set_xticks(x)
         ax.set_xticklabels(labels, rotation=90, fontsize=7)
         ax.set_ylabel(f"Mean # CI > {args.threshold}")
         ax.set_title(f"{name}: active subcomponents per circuit")
+        ax.set_ylim(0, layer_max_y * 1.05)
 
     fig.tight_layout()
 
-    if args.out:
-        fig.savefig(args.out, dpi=150)
-        print(f"Saved to {args.out}")
-    else:
-        plt.show()
+    out_path = Path(args.out) if args.out else SPD_OUT_DIR / "ci_per_circuit.png"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=150)
+    print(f"Saved to {out_path}")
 
 
 if __name__ == "__main__":
