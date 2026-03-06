@@ -199,8 +199,18 @@ def main(
         sigmoid_type=config.sigmoid_type,
     )
 
-    initialize_components_from_ground_truth(component_model, target_model)
-    initialize_ci_fns_from_ground_truth(component_model, target_model)
+    if task_config.init_components == "ideal":
+        initialize_components_from_ground_truth(component_model, target_model)
+        logger.info("Initialized components from ground truth")
+    else:
+        logger.info("Using random component initialization")
+
+    if task_config.init_ci == "ideal":
+        initialize_ci_fns_from_ground_truth(component_model, target_model)
+        logger.info("Initialized CI functions from ground truth")
+    else:
+        logger.info("Using random CI initialization")
+
     component_model.to(device)
 
     weight_deltas = component_model.calc_weight_deltas()

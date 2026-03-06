@@ -95,6 +95,8 @@ class PingPongTaskConfig(BaseConfig):
         default="pingpong",
         description="Task identifier for PingPong model",
     )
+    init_components: Literal["ideal", "random"] = "random"
+    init_ci: Literal["ideal", "random"] = "random"
 
 
 class ResidMLPTaskConfig(BaseConfig):
