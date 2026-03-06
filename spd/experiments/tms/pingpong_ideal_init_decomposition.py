@@ -191,6 +191,7 @@ def main(
 
     initialize_components_from_ground_truth(component_model, target_model)
     initialize_ci_fns_from_ground_truth(component_model, target_model)
+    component_model.to(device)
 
     weight_deltas = component_model.calc_weight_deltas()
     total_faith = sum(torch.norm(wd).item() for wd in weight_deltas.values())
