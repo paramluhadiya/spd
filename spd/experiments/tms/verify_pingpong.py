@@ -10,10 +10,9 @@ hidden activations. This catches any nonzero leakage into wrong blocks.
 """
 
 import torch
-from torch import Tensor
 from torch.nn import functional as F
 
-from spd.experiments.tms.bss_models import PingPongModel, PingPongTargetRunInfo
+from spd.experiments.tms.bss_models import PingPongModel
 
 
 def verify_masking_patterns(model: PingPongModel, n_samples: int = 100) -> None:
@@ -118,9 +117,9 @@ def verify_masking_patterns(model: PingPongModel, n_samples: int = 100) -> None:
         print("  ✓ Masking patterns verified (negligible leakage)")
     elif max_leakage < 1.0 and max_output_error < 1.0:
         print(f"  ⚠ Small leakage detected (B={model.config.B} may be too small)")
-        print(f"    This is acceptable if model.verify_all_circuits() passed")
+        print("    This is acceptable if model.verify_all_circuits() passed")
     else:
-        print(f"  ✗ Significant leakage detected!")
+        print("  ✗ Significant leakage detected!")
         assert False, f"Leakage too high: {max_leakage:.2e}"
 
 

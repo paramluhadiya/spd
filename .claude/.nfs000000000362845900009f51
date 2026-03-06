@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(nvidia-smi:*)",
+      "Bash(sinfo:*)",
+      "Bash(squeue:*)",
+      "Bash(source:*)",
+      "Bash(basedpyright:*)",
+      "Bash(python scripts/view_active_components.py:*)",
+      "Bash(make:*)",
+      "Bash(python scripts/pingpong_ci_per_circuit.py:*)",
+      "Bash(scancel:*)",
+      "Bash(python:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "svelte-llm"
+  ]
+}
