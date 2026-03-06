@@ -33,36 +33,43 @@ from spd.utils.module_utils import expand_module_patterns
 from spd.utils.run_utils import setup_decomposition_run
 from spd.utils.wandb_utils import init_wandb
 
-N_TRUE_COMPONENTS = 80  # 64 computational + 8 one_hot_i + 8 one_hot_j
+N_COMPUTATIONAL = 64  # One per neuron in the D-dimensional computational block
+N_INDEXING = 16  # 8 one_hot_i + 8 one_hot_j
+N_TRUE_COMPONENTS = N_COMPUTATIONAL + N_INDEXING  # 80 total
 
 
 def initialize_components_from_ground_truth(
     component_model: ComponentModel,
     target_model: PingPongModel,
+    component_indices: range,
 ) -> None:
     """Initialize V and U matrices to the column-wise rank-1 decomposition.
 
-    For each layer, V[:, k] = e_k for k=0..79, U[k, :] = W^T[k, :].
-    Components 80..C-1 keep their random initialization (scaled down).
+    For the specified component indices k, sets V[:, k] = e_k and U[k, :] = W^T[k, :].
+    Components outside this range are not modified.
     """
     for module_name in component_model.target_module_paths:
         components = component_model.components[module_name]
         assert isinstance(components, LinearComponents)
-
-        C = components.C
-        assert C >= N_TRUE_COMPONENTS, f"C={C} < {N_TRUE_COMPONENTS}"
+        assert components.C >= N_TRUE_COMPONENTS, f"C={components.C} < {N_TRUE_COMPONENTS}"
 
         W = component_model.target_weight(module_name)
         d_in = W.shape[1]
         assert d_in == target_model.input_dim
 
         with torch.no_grad():
-            # V (d_in, C): first 80 columns are standard basis
-            components.V.data[:, :N_TRUE_COMPONENTS] = torch.eye(d_in)
-            # U (C, d_out): V @ U = W^T, with V[:,:80] = I this gives U[:80,:] = W^T
-            components.U.data[:N_TRUE_COMPONENTS, :] = W.T[:N_TRUE_COMPONENTS, :]
+            eye = torch.eye(d_in, device=components.V.device)
+            for k in component_indices:
+                components.V.data[:, k] = eye[k]
+                components.U.data[k, :] = W.T[k, :]
 
-            # Scale down remaining components so they start small
+
+def scale_down_unused_components(component_model: ComponentModel) -> None:
+    """Scale down components beyond the true decomposition so they start small."""
+    for module_name in component_model.target_module_paths:
+        components = component_model.components[module_name]
+        assert isinstance(components, LinearComponents)
+        with torch.no_grad():
             components.V.data[:, N_TRUE_COMPONENTS:] *= 0.01
             components.U.data[N_TRUE_COMPONENTS:, :] *= 0.01
 
@@ -70,13 +77,21 @@ def initialize_components_from_ground_truth(
 def initialize_ci_fns_from_ground_truth(
     component_model: ComponentModel,
     target_model: PingPongModel,
+    component_indices: list[int],
 ) -> None:
-    """Initialize CI functions so that CI_k(x) is high when x_k > 0.
+    """Initialize CI functions so that CI_k(x) ≈ 1 when x_k > 0, ≈ 0 when x_k = 0.
 
-    For VectorSharedMLPCiFn with architecture Linear(80, 256) -> GELU -> Linear(256, C):
-    - Layer 0: maps input dim k to hidden dim k, so h_k = GELU(scale * x_k - offset)
-    - Layer 1: maps hidden dim k to output k, with bias tuned so CI > 0 when active
-    - Components 80..C-1 get moderately negative CI bias (off but reachable)
+    Only modifies weights for the specified component indices. Non-ideal components
+    retain their random initialization from the constructor.
+
+    Each ideal component k uses dedicated hidden dims 2k and 2k+1. To prevent
+    cross-talk, we zero: (1) row k of layer0 (input dim k doesn't leak to random
+    hidden dims), (2) columns 2k,2k+1 of layer0 (random inputs don't affect ideal
+    hidden dims), (3) rows 2k,2k+1 of layer1 (ideal hidden dims don't affect random
+    outputs). Then we set the ideal weights.
+
+    Uses a GELU finite-difference trick:
+      output_k = GELU(S*x_k - t) - GELU(S*x_k - (t+1)) ≈ 1 for x_k > 0
     """
     for module_name in component_model.target_module_paths:
         ci_fn = component_model.ci_fns[module_name]
@@ -89,39 +104,36 @@ def initialize_ci_fns_from_ground_truth(
 
         input_dim = layer0.W.shape[0]
         hidden_dim = layer0.W.shape[1]
-
         assert input_dim == target_model.input_dim
         assert hidden_dim >= 2 * N_TRUE_COMPONENTS
 
-        with torch.no_grad():
-            # We want CI_k(x) ≈ 1 when x_k > 0, ≈ 0 when x_k = 0.
-            # upper_leaky_hard sigmoid maps pre-sigmoid=1.0 → exactly 1.0,
-            # so we target pre-sigmoid output = 1.
-            #
-            # Use 2 hidden dims per component to build a saturating step:
-            #   h_pos = GELU(S * x_k - t)
-            #   h_neg = GELU(S * x_k - (t + 1))
-            #   output_k = h_pos - h_neg ≈ GELU'(·) ≈ 1 for x_k > 0
-            # Since GELU is asymptotically linear, GELU(a) - GELU(a-1) → 1
-            # as a → ∞. For x_k = 0: GELU(-t) - GELU(-t-1) ≈ small negative.
-            S = 50.0
-            t = 1.0
+        S = 50.0
+        t = 1.0
 
-            layer0.W.data.zero_()
-            layer0.b.data.zero_()
-            for k in range(N_TRUE_COMPONENTS):
+        with torch.no_grad():
+            # Set off-bias for unused components (80..C-1) — these are always off
+            C = layer1.W.shape[1]
+            layer1.b.data[N_TRUE_COMPONENTS:C] = -3.0
+
+            for k in component_indices:
+                # Zero row k of layer0: prevent input dim k from leaking to random hidden dims
+                layer0.W.data[k, :] = 0.0
+                # Zero columns 2k,2k+1 of layer0: isolate ideal hidden dims from random inputs
+                layer0.W.data[:, 2 * k] = 0.0
+                layer0.W.data[:, 2 * k + 1] = 0.0
+                # Zero rows 2k,2k+1 of layer1: isolate ideal hidden dims from random outputs
+                layer1.W.data[2 * k, :] = 0.0
+                layer1.W.data[2 * k + 1, :] = 0.0
+
+                # Set ideal weights
                 layer0.W.data[k, 2 * k] = S
                 layer0.W.data[k, 2 * k + 1] = S
-            layer0.b.data[:2 * N_TRUE_COMPONENTS:2] = -t
-            layer0.b.data[1:2 * N_TRUE_COMPONENTS:2] = -(t + 1)
+                layer0.b.data[2 * k] = -t
+                layer0.b.data[2 * k + 1] = -(t + 1)
 
-            # Layer 1: output_k = h_pos - h_neg (+ bias for off components)
-            layer1.W.data.zero_()
-            layer1.b.data.fill_(-3.0)  # Moderately negative default (CI off)
-            for k in range(N_TRUE_COMPONENTS):
                 layer1.W.data[2 * k, k] = 1.0
                 layer1.W.data[2 * k + 1, k] = -1.0
-            layer1.b.data[:N_TRUE_COMPONENTS] = 0.0
+                layer1.b.data[k] = 0.0
 
 
 def main(
@@ -199,23 +211,44 @@ def main(
         sigmoid_type=config.sigmoid_type,
     )
 
-    if task_config.init_components == "ideal":
-        initialize_components_from_ground_truth(component_model, target_model)
-        logger.info("Initialized components from ground truth")
-    else:
-        logger.info("Using random component initialization")
+    computational_range = range(0, N_COMPUTATIONAL)
+    indexing_range = range(N_COMPUTATIONAL, N_TRUE_COMPONENTS)
 
-    if task_config.init_ci == "ideal":
-        initialize_ci_fns_from_ground_truth(component_model, target_model)
-        logger.info("Initialized CI functions from ground truth")
-    else:
-        logger.info("Using random CI initialization")
+    if task_config.init_computational_components == "ideal":
+        initialize_components_from_ground_truth(component_model, target_model, computational_range)
+        logger.info("Initialized computational components (0-63) from ground truth")
+    if task_config.init_indexing_components == "ideal":
+        initialize_components_from_ground_truth(component_model, target_model, indexing_range)
+        logger.info("Initialized indexing components (64-79) from ground truth")
+    scale_down_unused_components(component_model)
+
+    ideal_ci_indices: list[int] = []
+    if task_config.init_computational_ci == "ideal":
+        ideal_ci_indices.extend(computational_range)
+        logger.info("Will initialize computational CI (0-63) from ground truth")
+    if task_config.init_indexing_ci == "ideal":
+        ideal_ci_indices.extend(indexing_range)
+        logger.info("Will initialize indexing CI (64-79) from ground truth")
+    if ideal_ci_indices:
+        initialize_ci_fns_from_ground_truth(component_model, target_model, ideal_ci_indices)
+
+    logger.info(
+        f"Init config: computational_components={task_config.init_computational_components}, "
+        f"indexing_components={task_config.init_indexing_components}, "
+        f"computational_ci={task_config.init_computational_ci}, "
+        f"indexing_ci={task_config.init_indexing_ci}"
+    )
 
     component_model.to(device)
 
     weight_deltas = component_model.calc_weight_deltas()
     total_faith = sum(torch.norm(wd).item() for wd in weight_deltas.values())
-    logger.info(f"Post-init faithfulness (should be ~0): {total_faith:.6e}")
+    both_ideal = (
+        task_config.init_computational_components == "ideal"
+        and task_config.init_indexing_components == "ideal"
+    )
+    expected = "~0 if both component groups ideal" if both_ideal else "nonzero (partial init)"
+    logger.info(f"Post-init faithfulness ({expected}): {total_faith:.6e}")
 
     dataset = PingPongDataset(
         D=target_model.D,
