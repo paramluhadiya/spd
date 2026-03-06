@@ -10,7 +10,8 @@
       "Bash(make:*)",
       "Bash(python scripts/pingpong_ci_per_circuit.py:*)",
       "Bash(scancel:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(ruff check spd/experiments/tms/pingpong_ideal_init_decomposition.py spd/run_spd.py spd/registry.py)"
     ]
   },
   "enableAllProjectMcpServers": true,

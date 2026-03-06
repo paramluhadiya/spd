@@ -1,3 +1,4 @@
+
 """Run SPD on PingPong with ground-truth initialization.
 
 Initializes V, U, and CI functions to match the true column-wise rank-1
@@ -90,28 +91,37 @@ def initialize_ci_fns_from_ground_truth(
         hidden_dim = layer0.W.shape[1]
 
         assert input_dim == target_model.input_dim
-        assert hidden_dim >= N_TRUE_COMPONENTS
+        assert hidden_dim >= 2 * N_TRUE_COMPONENTS
 
         with torch.no_grad():
-            # Layer 0 (80 -> 256): detect nonzero input dims
-            # All inputs are non-negative (post-ReLU or raw data in [0,1]).
-            # We want a sharp step at zero: GELU(100*x - 1) ≈ 0 for x=0,
-            # ≈ 100*x-1 for x>0.02. Even x=0.01 gives GELU(0) ≈ 0.
-            scale_in = 100.0
+            # We want CI_k(x) ≈ 1 when x_k > 0, ≈ 0 when x_k = 0.
+            # upper_leaky_hard sigmoid maps pre-sigmoid=1.0 → exactly 1.0,
+            # so we target pre-sigmoid output = 1.
+            #
+            # Use 2 hidden dims per component to build a saturating step:
+            #   h_pos = GELU(S * x_k - t)
+            #   h_neg = GELU(S * x_k - (t + 1))
+            #   output_k = h_pos - h_neg ≈ GELU'(·) ≈ 1 for x_k > 0
+            # Since GELU is asymptotically linear, GELU(a) - GELU(a-1) → 1
+            # as a → ∞. For x_k = 0: GELU(-t) - GELU(-t-1) ≈ small negative.
+            S = 50.0
+            t = 1.0
+
             layer0.W.data.zero_()
             layer0.b.data.zero_()
             for k in range(N_TRUE_COMPONENTS):
-                layer0.W.data[k, k] = scale_in
-            layer0.b.data[:N_TRUE_COMPONENTS] = -1.0
+                layer0.W.data[k, 2 * k] = S
+                layer0.W.data[k, 2 * k + 1] = S
+            layer0.b.data[:2 * N_TRUE_COMPONENTS:2] = -t
+            layer0.b.data[1:2 * N_TRUE_COMPONENTS:2] = -(t + 1)
 
-            # Layer 1 (256 -> C): route hidden dim k to output k
-            # For active dims: hidden ≈ scale_in * x - 1 >> 0, so output >> 0
-            # For inactive dims: hidden ≈ GELU(-1) ≈ -0.16, output ≈ -0.16 - 1 < 0
+            # Layer 1: output_k = h_pos - h_neg (+ bias for off components)
             layer1.W.data.zero_()
             layer1.b.data.fill_(-3.0)  # Moderately negative default (CI off)
             for k in range(N_TRUE_COMPONENTS):
-                layer1.W.data[k, k] = 1.0
-            layer1.b.data[:N_TRUE_COMPONENTS] = -1.0
+                layer1.W.data[2 * k, k] = 1.0
+                layer1.W.data[2 * k + 1, k] = -1.0
+            layer1.b.data[:N_TRUE_COMPONENTS] = 0.0
 
 
 def main(
