@@ -2,7 +2,7 @@
 # C=600 per layer, beta=0. Components and CIs initialized to the true decomposition.
 # --- WandB ---
 wandb_project: spd
-wandb_run_name: pingpong-ideal-init
+wandb_run_name: pingpong-ideal-init-beta-zero
 wandb_run_name_prefix: ""
 
 # --- General ---
@@ -27,7 +27,7 @@ loss_metric_configs:
   - classname: "FaithfulnessLoss"
     coeff: 5.0
   - classname: "ImportanceMinimalityLoss"
-    coeff: 1e-4
+    coeff: 2e-4
     pnorm: 2.0
     p_anneal_start_frac: 0.0
     p_anneal_end_frac: 1
