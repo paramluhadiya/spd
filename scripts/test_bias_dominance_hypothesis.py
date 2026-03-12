@@ -82,7 +82,14 @@ def component_label(k: int) -> str:
 
 @torch.no_grad()
 def main() -> None:
-    run_info = SPDRunInfo.from_path("wandb/s-e2e8fb27/files/model_100000.pth")
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("checkpoint", type=str, nargs="?",
+                        default="wandb/s-e2e8fb27/files/model_100000.pth")
+    args = parser.parse_args()
+
+    run_info = SPDRunInfo.from_path(args.checkpoint)
     model = ComponentModel.from_run_info(run_info)
     model.eval()
 

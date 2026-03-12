@@ -2,7 +2,7 @@
 # C=600 per layer, beta=0. Components and CIs initialized to the true decomposition.
 # --- WandB ---
 wandb_project: spd
-wandb_run_name: pingpong-ideal-comp-random-indexing
+wandb_run_name: pingpong-ideal-init-large-pgd
 wandb_run_name_prefix: ""
 
 # --- General ---
@@ -98,7 +98,7 @@ pretrained_model_path: "/home/pluhadiya/spd_out/train/t-a4d0f086/pingpong.pth"
 # --- Task Specific ---
 task_config:
   task_name: pingpong
-  init_computational_components: random
+  init_computational_components: ideal
   init_indexing_components: ideal
-  init_computational_ci: random
+  init_computational_ci: ideal
   init_indexing_ci: ideal
