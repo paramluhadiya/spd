@@ -1,0 +1,106 @@
+# PingPong 64-8 with per-circuit ideal initialization
+# C=600 per layer (528 true + 72 extra). Beta enabled.
+# 512 computational components (one per src×route×neuron), 16 indexing.
+# CI uses AND logic: AND(block_src, routing_onehot) via 2-hidden-layer MLP.
+
+# --- WandB ---
+wandb_project: spd
+wandb_run_name: pingpong-percircuit-ideal-init
+wandb_run_name_prefix: ""
+
+# --- General ---
+seed: 0
+n_mask_samples: 1
+ci_fn_type: "shared_mlp"
+ci_fn_hidden_dims: [256, 256]
+sigmoid_type: "leaky_hard"
+
+# Module decomposition: 3 layers, each (80 x 80)
+# C=600: 528 initialized to true per-circuit decomposition, 72 random/off
+module_info:
+  - module_pattern: "model.0"
+    C: 600
+  - module_pattern: "model.2"
+    C: 600
+  - module_pattern: "model.4"
+    C: 600
+use_delta_component: true
+
+loss_metric_configs:
+  - classname: "FaithfulnessLoss"
+    coeff: 5.0
+  - classname: "ImportanceMinimalityLoss"
+    coeff: 2e-4
+    pnorm: 2.0
+    p_anneal_start_frac: 0.0
+    p_anneal_end_frac: 1
+    p_anneal_final_p: 0.4
+    beta: 1.0
+  - classname: "PGDReconSubsetLoss"
+    coeff: 25
+    init: "ones"
+    step_size: 0.5
+    n_steps: 4
+    mask_scope: "shared_across_batch"
+  - classname: "PGDReconLoss"
+    coeff: 25
+    init: "ones"
+    step_size: 0.5
+    n_steps: 4
+    mask_scope: "shared_across_batch"
+output_loss_type: mse
+
+# --- Training ---
+batch_size: 4096
+eval_batch_size: 4096
+steps: 100000
+lr_schedule:
+  start_val: 5e-4
+  final_val_frac: 0.1
+  fn_type: cosine
+  warmup_pct: 0.0
+
+# --- Faithfulness Warmup ---
+faithfulness_warmup_steps: 0
+faithfulness_warmup_lr: 0.01
+faithfulness_warmup_weight_decay: 0.1
+
+# --- Logging & Saving ---
+train_log_freq: 100
+eval_freq: 1000
+n_eval_steps: 100
+slow_eval_freq: 2000
+save_freq: 10000
+ci_alive_threshold: 0.1
+n_examples_until_dead: 4_096_000
+eval_metric_configs:
+  - classname: "CIHistograms"
+    n_batches_accum: 5
+  - classname: "ComponentActivationDensity"
+  - classname: "CI_L0"
+    groups: null
+  - classname: "CIMeanPerComponent"
+  - classname: "PGDReconLoss"
+    init: "ones"
+    step_size: 0.1
+    n_steps: 20
+    mask_scope: "shared_across_batch"
+  - classname: "UnmaskedReconLoss"
+  - classname: StochasticHiddenActsReconLoss
+  - classname: "MaskingPatternEval"
+    D: 64
+    d: 8
+    cos_sim_threshold: 0.75
+    ci_threshold: 0.1
+
+# --- Pretrained model info ---
+pretrained_model_class: "spd.experiments.tms.bss_models.PingPongModel"
+pretrained_model_path: "/home/pluhadiya/spd_out/train/t-a4d0f086/pingpong.pth"
+
+# --- Task Specific ---
+task_config:
+  task_name: pingpong
+  init_computational_components: ideal
+  init_indexing_components: ideal
+  init_computational_ci: ideal
+  init_indexing_ci: ideal

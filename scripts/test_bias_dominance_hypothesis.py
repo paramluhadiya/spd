@@ -191,12 +191,12 @@ def main() -> None:
 
             if other_active:
                 other_active.sort(key=lambda x: -x[1])
-                print(f"    Other components active in >1% of samples:")
+                print("    Other components active in >1% of samples:")
                 for k, frac, mean_ci in other_active[:10]:
                     print(f"      {k:3d} ({component_label(k):>25s}): {frac*100:5.1f}%"
                           f"  (mean CI when active: {mean_ci:.3f})")
             else:
-                print(f"    No other components active in >1% of samples")
+                print("    No other components active in >1% of samples")
 
             # =====================================================
             # Q2: Active subspace reconstruction
@@ -215,7 +215,7 @@ def main() -> None:
             full_energy = mse(post_target)
             full_err = mse(post_target - post_eff)
 
-            print(f"\n  Q2: Reconstruction quality")
+            print("\n  Q2: Reconstruction quality")
             print(f"    Full output (all {INPUT_DIM} dims):")
             print(f"      energy={full_energy:.6f}  MSE={full_err:.6f}"
                   f"  rel={full_err/full_energy*100 if full_energy > 1e-10 else 0:.1f}%")
@@ -234,7 +234,7 @@ def main() -> None:
             comp_ci_mass = ci_vals[:, :N_COMPUTATIONAL].sum(dim=1).mean().item()
             idx_ci_mass = ci_vals[:, N_COMPUTATIONAL:N_TRUE].sum(dim=1).mean().item()
 
-            print(f"\n  Q3: Component diversity")
+            print("\n  Q3: Component diversity")
             print(f"    Computational components active per sample: "
                   f"mean={comp_active_per_sample.mean().item():.1f}  "
                   f"median={comp_active_per_sample.median().item():.0f}  "
@@ -246,7 +246,7 @@ def main() -> None:
             # Top computational components by total CI mass
             comp_ci_total = ci_vals[:, :N_COMPUTATIONAL].mean(dim=0)  # mean CI per component
             top_comp = comp_ci_total.topk(min(10, N_COMPUTATIONAL))
-            print(f"    Top computational components by mean CI:")
+            print("    Top computational components by mean CI:")
             for rank_idx in range(len(top_comp.indices)):
                 k = top_comp.indices[rank_idx].item()
                 mean_ci = top_comp.values[rank_idx].item()

@@ -13,7 +13,6 @@ Usage:
 """
 
 import argparse
-from pathlib import Path
 
 import torch
 
@@ -193,7 +192,7 @@ def main() -> None:
 
     print(f"\n  MSE from computational columns only: {comp_mse:.6f}")
     print(f"  MSE from indexing columns only: {idx_mse:.6f}")
-    print(f"  (Cross terms account for the rest)")
+    print("  (Cross terms account for the rest)")
 
     # Also show: what does the target output look like?
     comp_target_out = comp_input @ W_target.T
