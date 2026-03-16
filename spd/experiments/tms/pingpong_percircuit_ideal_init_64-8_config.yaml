@@ -30,12 +30,12 @@ loss_metric_configs:
   - classname: "FaithfulnessLoss"
     coeff: 5.0
   - classname: "ImportanceMinimalityLoss"
-    coeff: 2e-4
+    coeff: 1e-4
     pnorm: 2.0
     p_anneal_start_frac: 0.0
     p_anneal_end_frac: 1
     p_anneal_final_p: 0.4
-    beta: 1.0
+    beta: 0.16
   - classname: "PGDReconSubsetLoss"
     coeff: 25
     init: "ones"
@@ -55,7 +55,7 @@ batch_size: 4096
 eval_batch_size: 4096
 steps: 100000
 lr_schedule:
-  start_val: 5e-4
+  start_val: 1e-4
   final_val_frac: 0.1
   fn_type: cosine
   warmup_pct: 0.0
