@@ -2,14 +2,14 @@
 # C=600 per layer, beta=0. Components and CIs initialized to the true decomposition.
 # --- WandB ---
 wandb_project: spd
-wandb_run_name: pingpong-ideal-init-large-pgd
+wandb_run_name: pingpong-ideal-init-large-ci-mlp-small-lr
 wandb_run_name_prefix: ""
 
 # --- General ---
 seed: 0
 n_mask_samples: 1
 ci_fn_type: "shared_mlp"
-ci_fn_hidden_dims: [256]
+ci_fn_hidden_dims: [512]
 sigmoid_type: "leaky_hard"
 
 # Module decomposition: 3 layers, each (80 x 80)
@@ -34,13 +34,13 @@ loss_metric_configs:
     p_anneal_final_p: 0.4
     beta: 0.0
   - classname: "PGDReconSubsetLoss"
-    coeff: 25
+    coeff: 20
     init: "ones"
     step_size: 0.5
     n_steps: 4
     mask_scope: "shared_across_batch"
   - classname: "PGDReconLoss"
-    coeff: 25
+    coeff: 20
     init: "ones"
     step_size: 0.5
     n_steps: 4
@@ -52,16 +52,16 @@ batch_size: 4096
 eval_batch_size: 4096
 steps: 100000
 lr_schedule:
-  start_val: 5e-4
+  start_val: 5e-5
   final_val_frac: 0.1
   fn_type: cosine
   warmup_pct: 0.0
 
 # --- Faithfulness Warmup ---
 # Skip faithfulness warmup since we initialize to the true decomposition
-faithfulness_warmup_steps: 0
-faithfulness_warmup_lr: 0.01
-faithfulness_warmup_weight_decay: 0.1
+# faithfulness_warmup_steps: 0
+# faithfulness_warmup_lr: 0.01
+# faithfulness_warmup_weight_decay: 0.1
 
 # --- Logging & Saving ---
 train_log_freq: 100
