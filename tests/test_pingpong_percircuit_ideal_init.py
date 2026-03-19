@@ -2,9 +2,10 @@
 
 Verifies:
 1. Faithfulness: V @ U reconstructs the target weight matrix
-2. CI correctness: for every circuit (i,j) at every layer, exactly the right 10
-   components are active (8 computational + ohi + ohj) and all others are off
-3. Masked output: the decomposition with ideal CI matches the target model output
+2. CI no leaks: components outside the expected (src, route) block have CI ≈ 0
+3. CI matches activations: CI for the active block matches per-neuron activity in the
+   target model's intermediate hidden states
+4. Masked output: the decomposition with ideal CI matches the target model output
 """
 
 import torch
@@ -97,17 +98,14 @@ class TestFaithfulness:
             )
 
 
-class TestCICorrectness:
-    """For every circuit (i,j) at every layer, the CI MLP should output ~1 for the
-    correct 10 components and ~0 for everything else."""
+class TestCINoLeaks:
+    """Components outside the expected (src, route) block should have CI ≈ 0."""
 
-    def test_all_circuits_all_layers(self) -> None:
+    def test_no_ci_leaks(self) -> None:
         component_model, target_model = _build_initialized_model()
         component_model.eval()
 
-        ci_on_threshold = 0.8
         ci_off_threshold = 0.1
-
         failures: list[str] = []
 
         for i in range(NUM_BLOCKS):
@@ -119,21 +117,12 @@ class TestCICorrectness:
                 )
 
                 for layer_name in LAYER_NAMES:
-                    ci_vals = ci.upper_leaky[layer_name].mean(dim=0)  # (C,)
+                    ci_vals = ci.upper_leaky[layer_name].mean(dim=0)
 
                     expected_comp = _expected_active_comp_indices(layer_name, i, j)
                     expected_idx = _expected_active_indexing_indices(i, j)
                     expected_all = expected_comp | expected_idx
 
-                    # Check expected-ON components have CI > threshold
-                    for k in expected_all:
-                        if ci_vals[k].item() < ci_on_threshold:
-                            failures.append(
-                                f"({i},{j}) {layer_name} comp {k}: "
-                                f"CI={ci_vals[k].item():.4f} < {ci_on_threshold} (should be ON)"
-                            )
-
-                    # Check expected-OFF components have CI < threshold
                     for k in range(N_TRUE):
                         if k in expected_all:
                             continue
@@ -144,13 +133,24 @@ class TestCICorrectness:
                             )
 
         assert not failures, (
-            f"{len(failures)} CI failures:\n" + "\n".join(failures[:20])
+            f"{len(failures)} CI leak failures:\n" + "\n".join(failures[:20])
         )
 
-    def test_correct_active_count(self) -> None:
-        """Each circuit should have exactly 10 active components per layer."""
-        component_model, _ = _build_initialized_model()
+
+class TestCIMatchesActivations:
+    """CI for the active block should match per-neuron activity in intermediate hidden states."""
+
+    def test_ci_matches_target_activations(self) -> None:
+        component_model, target_model = _build_initialized_model()
         component_model.eval()
+
+        # The GELU finite-diff detector transitions around x ≈ 0.03.
+        # Use two thresholds with a gap to avoid the ambiguous transition zone.
+        neuron_clearly_on = 0.04
+        neuron_clearly_off = 0.01
+        ci_on_threshold = 0.8
+        ci_off_threshold = 0.1
+        failures: list[str] = []
 
         for i in range(NUM_BLOCKS):
             for j in range(NUM_BLOCKS):
@@ -161,11 +161,53 @@ class TestCICorrectness:
                 )
 
                 for layer_name in LAYER_NAMES:
-                    ci_vals = ci.upper_leaky[layer_name].mean(dim=0)
-                    n_active = (ci_vals[:N_TRUE] > 0.5).sum().item()
-                    assert n_active == 10, (
-                        f"({i},{j}) {layer_name}: {n_active} active (expected 10)"
-                    )
+                    ci_vals = ci.upper_leaky[layer_name]  # (batch, C)
+                    layer_input = output.cache[layer_name]  # (batch, input_dim)
+
+                    routing = LAYER_ROUTING[layer_name]
+                    if routing == "ohj":
+                        src, route = i, j
+                    else:
+                        src, route = j, i
+
+                    # Check computational components match neuron activity
+                    for neuron in range(d):
+                        k = src * d + neuron
+                        comp_idx = comp_index(src, route, neuron)
+                        ci_per_sample = ci_vals[:, comp_idx]
+
+                        clearly_on = layer_input[:, k] > neuron_clearly_on
+                        clearly_off = layer_input[:, k] < neuron_clearly_off
+
+                        if clearly_on.any():
+                            mean_ci_on = ci_per_sample[clearly_on].mean().item()
+                            if mean_ci_on < ci_on_threshold:
+                                failures.append(
+                                    f"({i},{j}) {layer_name} comp {comp_idx}: "
+                                    f"neuron clearly active, mean CI={mean_ci_on:.4f} < {ci_on_threshold}"
+                                )
+
+                        if clearly_off.any():
+                            mean_ci_off = ci_per_sample[clearly_off].mean().item()
+                            if mean_ci_off > ci_off_threshold:
+                                failures.append(
+                                    f"({i},{j}) {layer_name} comp {comp_idx}: "
+                                    f"neuron clearly inactive, mean CI={mean_ci_off:.4f} > {ci_off_threshold}"
+                                )
+
+                    # Check indexing components are ON
+                    for idx in _expected_active_indexing_indices(i, j):
+                        mean_ci = ci_vals[:, idx].mean().item()
+                        if mean_ci < ci_on_threshold:
+                            failures.append(
+                                f"({i},{j}) {layer_name} idx {idx}: "
+                                f"CI={mean_ci:.4f} < {ci_on_threshold} (should be ON)"
+                            )
+
+        assert not failures, (
+            f"{len(failures)} CI-activation mismatch failures:\n"
+            + "\n".join(failures[:20])
+        )
 
 
 class TestComponentIndexing:
