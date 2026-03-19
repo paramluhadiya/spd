@@ -1,7 +1,7 @@
 # PingPong 64-8 with per-circuit ideal initialization
 # C=600 per layer (528 true + 72 extra). Beta enabled.
 # 512 computational components (one per src×route×neuron), 16 indexing.
-# CI uses AND logic: AND(block_src, routing_onehot) via 2-hidden-layer MLP.
+# CI uses AND logic: AND(neuron_k, routing_onehot) via 2-hidden-layer MLP.
 
 # --- WandB ---
 wandb_project: spd
@@ -12,7 +12,7 @@ wandb_run_name_prefix: ""
 seed: 0
 n_mask_samples: 1
 ci_fn_type: "shared_mlp"
-ci_fn_hidden_dims: [256, 256]
+ci_fn_hidden_dims: [2048, 2048]
 sigmoid_type: "leaky_hard"
 
 # Module decomposition: 3 layers, each (80 x 80)
@@ -55,7 +55,7 @@ batch_size: 4096
 eval_batch_size: 4096
 steps: 100000
 lr_schedule:
-  start_val: 1e-4
+  start_val: 5e-5
   final_val_frac: 0.1
   fn_type: cosine
   warmup_pct: 0.0
@@ -69,7 +69,7 @@ faithfulness_warmup_weight_decay: 0.1
 train_log_freq: 100
 eval_freq: 1000
 n_eval_steps: 100
-slow_eval_freq: 2000
+slow_eval_freq: 1000
 save_freq: 10000
 ci_alive_threshold: 0.1
 n_examples_until_dead: 4_096_000

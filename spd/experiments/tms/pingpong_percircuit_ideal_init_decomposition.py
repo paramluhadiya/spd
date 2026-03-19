@@ -7,12 +7,12 @@ this uses 528 true components:
   - 16 indexing: 8 ohi + 8 ohj (same as original)
 
 CI initialization uses AND logic via a 3-layer MLP (2 hidden + output):
-  - Layer 0: detect block activity (sum), ohi, ohj from input
-  - Layer 1: compute AND(block_src, routing_onehot) for each (src, route) pair
-  - Layer 2: map AND results to component CIs
+  - Layer 0: detect individual neuron activity, ohi, ohj from input
+  - Layer 1: compute AND(neuron_k, routing_onehot) for each (neuron, route) pair
+  - Layer 2: map AND results to component CIs (one-to-one)
 
-  Layers 0, 2: CI_k = AND(block_src active, ohj[route] = 1)
-  Layer 1:     CI_k = AND(block_src active, ohi[route] = 1)
+  Layers 0, 2: CI_k = AND(neuron_k active, ohj[route] = 1)
+  Layer 1:     CI_k = AND(neuron_k active, ohi[route] = 1)
 
 Usage:
     python spd/experiments/tms/pingpong_percircuit_ideal_init_decomposition.py \\
@@ -58,16 +58,16 @@ LAYER_ROUTING: dict[str, str] = {
 
 # --- Hidden dim layout ---
 # Layer 0 output (hidden1):
-H1_BLOCK_START = 0   # dims 0..15:  block sum detectors (8 blocks × 2)
-H1_OHI_START = 16    # dims 16..31: ohi detectors (8 × 2)
-H1_OHJ_START = 32    # dims 32..47: ohj detectors (8 × 2)
-N_IDEAL_H1 = 48
+H1_NEURON_START = 0   # dims 0..127:  individual neuron detectors (64 neurons × 2)
+H1_OHI_START = 128    # dims 128..143: ohi detectors (8 × 2)
+H1_OHJ_START = 144    # dims 144..159: ohj detectors (8 × 2)
+N_IDEAL_H1 = 160
 
 # Layer 1 output (hidden2):
-H2_AND_START = 0     # dims 0..127:   AND detectors (64 pairs × 2)
-H2_OHI_START = 128   # dims 128..143: ohi pass-through (8 × 2)
-H2_OHJ_START = 144   # dims 144..159: ohj pass-through (8 × 2)
-N_IDEAL_H2 = 160
+H2_AND_START = 0       # dims 0..1023: AND detectors (512 neuron×route pairs × 2)
+H2_OHI_START = 1024    # dims 1024..1039: ohi pass-through (8 × 2)
+H2_OHJ_START = 1040    # dims 1040..1055: ohj pass-through (8 × 2)
+N_IDEAL_H2 = 1056
 
 
 def comp_index(src: int, route: int, neuron: int) -> int:
@@ -147,9 +147,9 @@ def initialize_ci_fns_from_ground_truth(
     """Initialize CI MLP for AND-based per-circuit detection.
 
     Uses GELU finite-difference trick across 3 layers:
-      Layer 0: detect block sums, ohi, ohj from input
-      Layer 1: AND(block_src, routing_onehot) + indexing pass-through
-      Layer 2: map to component CIs
+      Layer 0: detect individual neuron activations, ohi, ohj from input
+      Layer 1: AND(neuron_k, routing_onehot) + indexing pass-through
+      Layer 2: map to component CIs (one-to-one)
     """
     S = 50.0
     t = 1.0
@@ -185,13 +185,12 @@ def initialize_ci_fns_from_ground_truth(
             for k in range(input_dim):
                 layer0.W.data[k, :] = 0.0
 
-            # Block sum detectors: sum all d neurons in block, apply GELU finite diff
-            for b in range(NUM_BLOCKS):
-                h_pos = H1_BLOCK_START + 2 * b
+            # Individual neuron detectors: one per neuron, GELU finite diff
+            for k in range(D):
+                h_pos = H1_NEURON_START + 2 * k
                 h_neg = h_pos + 1
-                for n in range(d):
-                    layer0.W.data[b * d + n, h_pos] = S
-                    layer0.W.data[b * d + n, h_neg] = S
+                layer0.W.data[k, h_pos] = S
+                layer0.W.data[k, h_neg] = S
                 layer0.b.data[h_pos] = -t
                 layer0.b.data[h_neg] = -(t + 1)
 
@@ -221,23 +220,22 @@ def initialize_ci_fns_from_ground_truth(
             for h in range(N_IDEAL_H1):
                 layer1.W.data[h, :] = 0.0
 
-            # AND detectors: AND(block_src indicator, routing_onehot indicator)
-            # Routing uses ohj for layers 0,2 and ohi for layer 1
+            # AND detectors: AND(neuron_k indicator, routing_onehot indicator)
             routing_h1_start = H1_OHJ_START if routing == "ohj" else H1_OHI_START
 
-            for src in range(NUM_BLOCKS):
+            for k in range(D):
                 for route in range(NUM_BLOCKS):
-                    and_idx = src * NUM_BLOCKS + route
+                    and_idx = k * NUM_BLOCKS + route
                     h2_pos = H2_AND_START + 2 * and_idx
                     h2_neg = h2_pos + 1
 
-                    # Block src indicator: h1[2*src] - h1[2*src+1]
-                    block_h1_pos = H1_BLOCK_START + 2 * src
-                    block_h1_neg = block_h1_pos + 1
-                    layer1.W.data[block_h1_pos, h2_pos] = S
-                    layer1.W.data[block_h1_neg, h2_pos] = -S
-                    layer1.W.data[block_h1_pos, h2_neg] = S
-                    layer1.W.data[block_h1_neg, h2_neg] = -S
+                    # Neuron k indicator: h1[2*k] - h1[2*k+1]
+                    neuron_h1_pos = H1_NEURON_START + 2 * k
+                    neuron_h1_neg = neuron_h1_pos + 1
+                    layer1.W.data[neuron_h1_pos, h2_pos] = S
+                    layer1.W.data[neuron_h1_neg, h2_pos] = -S
+                    layer1.W.data[neuron_h1_pos, h2_neg] = S
+                    layer1.W.data[neuron_h1_neg, h2_neg] = -S
 
                     # Routing one-hot indicator
                     route_h1_pos = routing_h1_start + 2 * route
@@ -284,17 +282,18 @@ def initialize_ci_fns_from_ground_truth(
             for h in range(N_IDEAL_H2):
                 layer2.W.data[h, :] = 0.0
 
-            # Computational: all 8 neurons in (src, route) read same AND
-            for src in range(NUM_BLOCKS):
+            # Computational: each AND(neuron_k, route) maps to exactly one component
+            for k in range(D):
+                src = k // d
+                neuron = k % d
                 for route in range(NUM_BLOCKS):
-                    and_idx = src * NUM_BLOCKS + route
+                    and_idx = k * NUM_BLOCKS + route
                     h2_pos = H2_AND_START + 2 * and_idx
                     h2_neg = h2_pos + 1
-                    for neuron in range(d):
-                        c_idx = comp_index(src, route, neuron)
-                        layer2.W.data[h2_pos, c_idx] = 1.0
-                        layer2.W.data[h2_neg, c_idx] = -1.0
-                        layer2.b.data[c_idx] = 0.0
+                    c_idx = comp_index(src, route, neuron)
+                    layer2.W.data[h2_pos, c_idx] = 1.0
+                    layer2.W.data[h2_neg, c_idx] = -1.0
+                    layer2.b.data[c_idx] = 0.0
 
             # Indexing: read from pass-through dims
             for i in range(N_OHI):
