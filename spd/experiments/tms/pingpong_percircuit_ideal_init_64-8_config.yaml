@@ -5,7 +5,7 @@
 
 # --- WandB ---
 wandb_project: spd
-wandb_run_name: pingpong-percircuit-ideal-init
+wandb_run_name: pingpong-percircuit-random-comp
 wandb_run_name_prefix: ""
 
 # --- General ---
@@ -100,7 +100,7 @@ pretrained_model_path: "/home/pluhadiya/spd_out/train/t-a4d0f086/pingpong.pth"
 # --- Task Specific ---
 task_config:
   task_name: pingpong
-  init_computational_components: ideal
+  init_computational_components: random
   init_indexing_components: ideal
-  init_computational_ci: ideal
+  init_computational_ci: random
   init_indexing_ci: ideal
