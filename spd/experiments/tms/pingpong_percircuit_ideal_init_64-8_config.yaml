@@ -5,7 +5,7 @@
 
 # --- WandB ---
 wandb_project: spd
-wandb_run_name: pingpong-percircuit-ideal-init
+wandb_run_name: pingpong-percircuit-ideal
 wandb_run_name_prefix: ""
 
 # --- General ---
