@@ -1,14 +1,14 @@
 # PingPong 64-8 (D=64, d=8, T=64 circuits, 3 layers)
 # --- WandB ---
 wandb_project: spd
-wandb_run_name: 4096-beta-balanced
+wandb_run_name: 4096-beta-balanced-5e-5
 wandb_run_name_prefix: ""
 
 # --- General ---
 seed: 0
 n_mask_samples: 1
 ci_fn_type: "shared_mlp"
-ci_fn_hidden_dims: [256]
+ci_fn_hidden_dims: [2048, 2048]
 sigmoid_type: "leaky_hard"
 
 # Module decomposition: decompose the layer weight matrices
@@ -17,11 +17,11 @@ sigmoid_type: "leaky_hard"
 # PingPong uses nn.Sequential, so layers are model.0, model.2, model.4 (Linear layers)
 module_info:
   - module_pattern: "model.0"
-    C: 1200
+    C: 600
   - module_pattern: "model.2"
-    C: 1200
+    C: 600
   - module_pattern: "model.4"
-    C: 1200
+    C: 600
 use_delta_component: true
 
 loss_metric_configs:
@@ -38,13 +38,13 @@ loss_metric_configs:
   #   coeff: 1.0
   # Removing stochastic recon loss made the decomposition more sensible. 
   - classname: "PGDReconSubsetLoss"
-    coeff: 1
+    coeff: 25
     init: "ones"
     step_size: 0.5
     n_steps: 4
     mask_scope: "shared_across_batch"
   - classname: "PGDReconLoss"
-    coeff: 1
+    coeff: 25
     init: "ones"
     step_size: 0.5
     n_steps: 4
@@ -54,9 +54,9 @@ output_loss_type: mse
 # --- Training ---
 batch_size: 4096
 eval_batch_size: 4096
-steps: 100000
+steps: 200000
 lr_schedule:
-  start_val: 1e-3
+  start_val: 5e-5
   final_val_frac: 0.1
   fn_type: cosine
   warmup_pct: 0.0

@@ -5,7 +5,7 @@
 
 # --- WandB ---
 wandb_project: spd
-wandb_run_name: pingpong-percircuit-ideal-init
+wandb_run_name: pingpong-percircuit-ideal
 wandb_run_name_prefix: ""
 
 # --- General ---
@@ -55,7 +55,7 @@ batch_size: 4096
 eval_batch_size: 4096
 steps: 100000
 lr_schedule:
-  start_val: 5e-5
+  start_val: 1e-5
   final_val_frac: 0.1
   fn_type: cosine
   warmup_pct: 0.0
