@@ -10,6 +10,7 @@ from torch.types import Number
 from wandb.plot.custom_chart import CustomChart
 
 from spd.configs import (
+    BetaInfImportanceMinimalityLossConfig,
     CEandKLLossesConfig,
     CI_L0Config,
     CIHistogramsConfig,
@@ -22,6 +23,7 @@ from spd.configs import (
     FaithfulnessLossConfig,
     IdentityCIErrorConfig,
     ImportanceMinimalityLossConfig,
+    MaskingPatternEvalConfig,
     MetricConfigType,
     PermutedCIPlotsConfig,
     PGDMultiBatchReconLossConfig,
@@ -34,6 +36,7 @@ from spd.configs import (
     StochasticReconLossConfig,
     StochasticReconSubsetCEAndKLConfig,
     StochasticReconSubsetLossConfig,
+    ThresholdFaithfulnessLossConfig,
     UnmaskedReconLossConfig,
     UVPlotsConfig,
 )
@@ -49,7 +52,11 @@ from spd.metrics.ci_mean_per_component import CIMeanPerComponent
 from spd.metrics.component_activation_density import ComponentActivationDensity
 from spd.metrics.faithfulness_loss import FaithfulnessLoss
 from spd.metrics.identity_ci_error import IdentityCIError
-from spd.metrics.importance_minimality_loss import ImportanceMinimalityLoss
+from spd.metrics.importance_minimality_loss import (
+    BetaInfImportanceMinimalityLoss,
+    ImportanceMinimalityLoss,
+)
+from spd.metrics.masking_pattern_eval import MaskingPatternEval
 from spd.metrics.permuted_ci_plots import PermutedCIPlots
 from spd.metrics.pgd_masked_recon_layerwise_loss import PGDReconLayerwiseLoss
 from spd.metrics.pgd_masked_recon_loss import PGDReconLoss
@@ -133,7 +140,22 @@ def init_metric(
                 p_anneal_final_p=cfg.p_anneal_final_p,
                 p_anneal_end_frac=cfg.p_anneal_end_frac,
             )
+        case BetaInfImportanceMinimalityLossConfig():
+            metric = BetaInfImportanceMinimalityLoss(
+                model=model,
+                device=device,
+                pnorm=cfg.pnorm,
+                p_anneal_start_frac=cfg.p_anneal_start_frac,
+                p_anneal_final_p=cfg.p_anneal_final_p,
+                p_anneal_end_frac=cfg.p_anneal_end_frac,
+            )
         case FaithfulnessLossConfig():
+            metric = FaithfulnessLoss(
+                model=model,
+                device=device,
+            )
+        case ThresholdFaithfulnessLossConfig():
+            # For eval, use regular FaithfulnessLoss (threshold only matters for training gradients)
             metric = FaithfulnessLoss(
                 model=model,
                 device=device,
@@ -272,6 +294,15 @@ def init_metric(
                 model=model,
                 device=device,
                 output_loss_type=run_config.output_loss_type,
+            )
+        case MaskingPatternEvalConfig():
+            metric = MaskingPatternEval(
+                model=model,
+                device=device,
+                D=cfg.D,
+                d=cfg.d,
+                cos_sim_threshold=cfg.cos_sim_threshold,
+                ci_threshold=cfg.ci_threshold,
             )
 
         case _:

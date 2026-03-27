@@ -42,7 +42,9 @@ _WANDB_URL_RE = re.compile(
 METRIC_CONFIG_SHORT_NAMES: dict[str, str] = {
     # Loss metrics
     "FaithfulnessLoss": "Faith",
+    "ThresholdFaithfulnessLoss": "ThreshFaith",
     "ImportanceMinimalityLoss": "ImpMin",
+    "BetaInfImportanceMinimalityLoss": "BetaInfImpMin",
     "StochasticReconLoss": "StochRecon",
     "StochasticReconSubsetLoss": "StochReconSub",
     "StochasticReconLayerwiseLoss": "StochReconLayer",
@@ -66,6 +68,7 @@ METRIC_CONFIG_SHORT_NAMES: dict[str, str] = {
     "StochasticReconSubsetCEAndKL": "StochReconSubCEKL",
     "PGDMultiBatchReconLoss": "PGDMultiBatchRecon",
     "PGDMultiBatchReconSubsetLoss": "PGDMultiBatchReconSub",
+    "MaskingPatternEval": "MaskPatEval",
 }
 
 

@@ -123,6 +123,7 @@ def optimize(
     out_dir: Path | None,
     tied_weights: list[tuple[str, str]] | None = None,
     ln_stds: dict[str, float] | None = None,
+    pre_built_component_model: ComponentModel | None = None,
 ) -> None:
     """Run the optimization loop for LM decomposition."""
 
@@ -139,24 +140,27 @@ def optimize(
     if is_main_process():
         logger.info(f"Train+eval logs saved to directory: {out_dir}")
 
-    if config.identity_module_info is not None:
-        insert_identity_operations_(
-            target_model,
-            identity_module_info=config.identity_module_info,
+    if pre_built_component_model is not None:
+        model = pre_built_component_model
+    else:
+        if config.identity_module_info is not None:
+            insert_identity_operations_(
+                target_model,
+                identity_module_info=config.identity_module_info,
+            )
+
+        target_model.requires_grad_(False)
+
+        module_path_info = expand_module_patterns(target_model, config.all_module_info)
+
+        model = ComponentModel(
+            target_model=target_model,
+            module_path_info=module_path_info,
+            ci_fn_type=config.ci_fn_type,
+            ci_fn_hidden_dims=config.ci_fn_hidden_dims,
+            pretrained_model_output_attr=config.pretrained_model_output_attr,
+            sigmoid_type=config.sigmoid_type,
         )
-
-    target_model.requires_grad_(False)
-
-    module_path_info = expand_module_patterns(target_model, config.all_module_info)
-
-    model = ComponentModel(
-        target_model=target_model,
-        module_path_info=module_path_info,
-        ci_fn_type=config.ci_fn_type,
-        ci_fn_hidden_dims=config.ci_fn_hidden_dims,
-        pretrained_model_output_attr=config.pretrained_model_output_attr,
-        sigmoid_type=config.sigmoid_type,
-    )
 
     if ln_stds is not None:
         # model has ablated layernorms, patch in the fixed std values

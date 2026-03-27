@@ -79,6 +79,46 @@ class TMSTaskConfig(BaseConfig):
     )
 
 
+class BSSTaskConfig(BaseConfig):
+    """Task config for Block-Structured Superposition model."""
+
+    task_name: Literal["bss"] = Field(
+        default="bss",
+        description="Task identifier for BSS (Block-Structured Superposition)",
+    )
+
+
+class PingPongTaskConfig(BaseConfig):
+    """Task config for PingPong computation in superposition model.
+
+    Component groups:
+      - computational: 64 components (one per neuron in the D-dimensional computational block)
+      - indexing: 16 components (8 one_hot_i + 8 one_hot_j for bias/mask + identity pass-through)
+
+    Constraint: if a component group is random, its CI must also be random.
+    """
+
+    task_name: Literal["pingpong"] = Field(
+        default="pingpong",
+        description="Task identifier for PingPong model",
+    )
+    init_computational_components: Literal["ideal", "random"] = "random"
+    init_indexing_components: Literal["ideal", "random"] = "random"
+    init_computational_ci: Literal["ideal", "random"] = "random"
+    init_indexing_ci: Literal["ideal", "random"] = "random"
+
+    @model_validator(mode="after")
+    def _random_components_require_random_ci(self) -> "PingPongTaskConfig":
+        assert not (
+            self.init_computational_components == "random"
+            and self.init_computational_ci == "ideal"
+        ), "Random computational components require random computational CI"
+        assert not (
+            self.init_indexing_components == "random" and self.init_indexing_ci == "ideal"
+        ), "Random indexing components require random indexing CI"
+        return self
+
+
 class ResidMLPTaskConfig(BaseConfig):
     task_name: Literal["resid_mlp"] = Field(
         default="resid_mlp",
@@ -173,6 +213,20 @@ class FaithfulnessLossConfig(LossMetricConfig):
     classname: Literal["FaithfulnessLoss"] = "FaithfulnessLoss"
 
 
+class ThresholdFaithfulnessLossConfig(LossMetricConfig):
+    """Faithfulness loss that stops penalizing suppression terms once they're 'working'.
+
+    For parameters where target < -threshold (suppression terms):
+      - If learned < -threshold: no penalty (suppression is working)
+      - If learned >= -threshold: penalize the gap
+
+    For other parameters: normal MSE.
+    """
+
+    classname: Literal["ThresholdFaithfulnessLoss"] = "ThresholdFaithfulnessLoss"
+    threshold: float = 5.0
+
+
 class ImportanceMinimalityLossConfig(LossMetricConfig):
     classname: Literal["ImportanceMinimalityLoss"] = "ImportanceMinimalityLoss"
     pnorm: NonNegativeFloat
@@ -189,6 +243,15 @@ class ImportanceMinimalityLossConfig(LossMetricConfig):
             logger.warning("beta not in ImportanceMinimalityLossConfig, defaulting to 0.0")
             data["beta"] = 0.0
         return data
+
+
+class BetaInfImportanceMinimalityLossConfig(LossMetricConfig):
+    classname: Literal["BetaInfImportanceMinimalityLoss"] = "BetaInfImportanceMinimalityLoss"
+    pnorm: NonNegativeFloat
+    p_anneal_start_frac: Probability = 1.0
+    p_anneal_final_p: NonNegativeFloat | None = None
+    p_anneal_end_frac: Probability = 1.0
+    eps: NonNegativeFloat = 1e-12
 
 
 class UniformKSubsetRoutingConfig(BaseConfig):
@@ -340,6 +403,16 @@ class UVPlotsConfig(BaseConfig):
     dense_patterns: list[str] | None
 
 
+class MaskingPatternEvalConfig(BaseConfig):
+    """Config for PingPong masking pattern evaluation."""
+
+    classname: Literal["MaskingPatternEval"] = "MaskingPatternEval"
+    D: int
+    d: int
+    cos_sim_threshold: float = 0.9
+    ci_threshold: float = 0.1
+
+
 ReconLossConfigType = (
     UnmaskedReconLossConfig
     | CIMaskedReconLossConfig
@@ -354,7 +427,13 @@ ReconLossConfigType = (
     | StochasticHiddenActsReconLossConfig
 )
 
-LossMetricConfigType = FaithfulnessLossConfig | ImportanceMinimalityLossConfig | ReconLossConfigType
+LossMetricConfigType = (
+    FaithfulnessLossConfig
+    | ThresholdFaithfulnessLossConfig
+    | ImportanceMinimalityLossConfig
+    | BetaInfImportanceMinimalityLossConfig
+    | ReconLossConfigType
+)
 
 EvalOnlyMetricConfigType = (
     CEandKLLossesConfig
@@ -368,10 +447,11 @@ EvalOnlyMetricConfigType = (
     | StochasticReconSubsetCEAndKLConfig
     | PGDMultiBatchReconLossConfig
     | PGDMultiBatchReconSubsetLossConfig
+    | MaskingPatternEvalConfig
 )
 MetricConfigType = LossMetricConfigType | EvalOnlyMetricConfigType
 
-TaskConfig = TMSTaskConfig | ResidMLPTaskConfig | LMTaskConfig | IHTaskConfig
+TaskConfig = TMSTaskConfig | BSSTaskConfig | PingPongTaskConfig | ResidMLPTaskConfig | LMTaskConfig | IHTaskConfig
 
 SamplingType = Literal["continuous", "binomial"]
 

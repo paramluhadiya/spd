@@ -5,6 +5,7 @@ from jaxtyping import Float, Int
 from torch import Tensor
 
 from spd.configs import (
+    BetaInfImportanceMinimalityLossConfig,
     CIMaskedReconLayerwiseLossConfig,
     CIMaskedReconLossConfig,
     CIMaskedReconSubsetLossConfig,
@@ -19,9 +20,11 @@ from spd.configs import (
     StochasticReconLayerwiseLossConfig,
     StochasticReconLossConfig,
     StochasticReconSubsetLossConfig,
+    ThresholdFaithfulnessLossConfig,
     UnmaskedReconLossConfig,
 )
 from spd.metrics import (
+    beta_inf_importance_minimality_loss,
     ci_masked_recon_layerwise_loss,
     ci_masked_recon_loss,
     ci_masked_recon_subset_loss,
@@ -34,6 +37,7 @@ from spd.metrics import (
     stochastic_recon_layerwise_loss,
     stochastic_recon_loss,
     stochastic_recon_subset_loss,
+    threshold_faithfulness_loss,
     unmasked_recon_loss,
 )
 from spd.models.component_model import CIOutputs, ComponentModel
@@ -65,12 +69,28 @@ def compute_total_loss(
         match cfg:
             case FaithfulnessLossConfig():
                 loss = faithfulness_loss(weight_deltas=weight_deltas)
+            case ThresholdFaithfulnessLossConfig():
+                loss = threshold_faithfulness_loss(
+                    weight_deltas=weight_deltas,
+                    model=model,
+                    threshold=cfg.threshold,
+                )
             case ImportanceMinimalityLossConfig():
                 loss = importance_minimality_loss(
                     ci_upper_leaky=ci.upper_leaky,
                     current_frac_of_training=current_frac_of_training,
                     pnorm=cfg.pnorm,
                     beta=cfg.beta,
+                    eps=cfg.eps,
+                    p_anneal_start_frac=cfg.p_anneal_start_frac,
+                    p_anneal_final_p=cfg.p_anneal_final_p,
+                    p_anneal_end_frac=cfg.p_anneal_end_frac,
+                )
+            case BetaInfImportanceMinimalityLossConfig():
+                loss = beta_inf_importance_minimality_loss(
+                    ci_upper_leaky=ci.upper_leaky,
+                    current_frac_of_training=current_frac_of_training,
+                    pnorm=cfg.pnorm,
                     eps=cfg.eps,
                     p_anneal_start_frac=cfg.p_anneal_start_frac,
                     p_anneal_final_p=cfg.p_anneal_final_p,

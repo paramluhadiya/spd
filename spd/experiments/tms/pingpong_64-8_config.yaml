@@ -1,0 +1,109 @@
+# PingPong 64-8 (D=64, d=8, T=64 circuits, 3 layers)
+# --- WandB ---
+wandb_project: spd
+wandb_run_name: 4096-beta-balanced-5e-5
+wandb_run_name_prefix: ""
+
+# --- General ---
+seed: 0
+n_mask_samples: 1
+ci_fn_type: "shared_mlp"
+ci_fn_hidden_dims: [2048, 2048]
+sigmoid_type: "leaky_hard"
+
+# Module decomposition: decompose the layer weight matrices
+# Each layer is (input_dim x input_dim) where input_dim = D + 2*num_blocks = 80
+# The c->c block (D x D) contains the actual circuit weights
+# PingPong uses nn.Sequential, so layers are model.0, model.2, model.4 (Linear layers)
+module_info:
+  - module_pattern: "model.0"
+    C: 600
+  - module_pattern: "model.2"
+    C: 600
+  - module_pattern: "model.4"
+    C: 600
+use_delta_component: true
+
+loss_metric_configs:
+  - classname: "FaithfulnessLoss"
+    coeff: 5.0
+  - classname: "ImportanceMinimalityLoss"
+    coeff: 1e-4  # NOTE: when beta=0, 2e-4 worked pretty well for 4096 batch size. 
+    pnorm: 2.0
+    p_anneal_start_frac: 0.0
+    p_anneal_end_frac: 1
+    p_anneal_final_p: 0.4
+    beta: 0.16 #TODO change this. We want to have nonzero beta. Might try this with beta = +inf by changing the minimality loss to only keep beta term. 
+  # - classname: "StochasticReconLoss"
+  #   coeff: 1.0
+  # Removing stochastic recon loss made the decomposition more sensible. 
+  - classname: "PGDReconLayerwiseLoss"
+    coeff: 10
+    init: "ones"
+    step_size: 0.5
+    n_steps: 4
+    mask_scope: "shared_across_batch"
+  - classname: "PGDReconSubsetLoss"
+    coeff: 25
+    init: "ones"
+    step_size: 0.5
+    n_steps: 4
+    mask_scope: "shared_across_batch"
+  - classname: "PGDReconLoss"
+    coeff: 25
+    init: "ones"
+    step_size: 0.5
+    n_steps: 4
+    mask_scope: "shared_across_batch"
+output_loss_type: mse
+
+# --- Training ---
+batch_size: 4096
+eval_batch_size: 4096
+steps: 200000
+lr_schedule:
+  start_val: 5e-5
+  final_val_frac: 0.1
+  fn_type: cosine
+  warmup_pct: 0.0
+
+# --- Faithfulness Warmup ---
+faithfulness_warmup_steps: 200
+faithfulness_warmup_lr: 0.01
+faithfulness_warmup_weight_decay: 0.1
+
+# --- Logging & Saving ---
+train_log_freq: 100
+eval_freq: 1000
+n_eval_steps: 100
+slow_eval_freq: 2000
+save_freq: 10000
+ci_alive_threshold: 0.1
+n_examples_until_dead: 4_096_000
+eval_metric_configs:
+  - classname: "CIHistograms"
+    n_batches_accum: 5
+  - classname: "ComponentActivationDensity"
+  - classname: "CI_L0"
+    groups: null
+  - classname: "CIMeanPerComponent"
+  - classname: "PGDReconLoss"
+    init: "ones"
+    step_size: 0.1
+    n_steps: 20
+    mask_scope: "shared_across_batch"
+  - classname: "UnmaskedReconLoss"
+  - classname: StochasticHiddenActsReconLoss
+  - classname: "MaskingPatternEval"
+    D: 64
+    d: 8
+    cos_sim_threshold: 0.75
+    ci_threshold: 0.1
+
+# --- Pretrained model info ---
+pretrained_model_class: "spd.experiments.tms.bss_models.PingPongModel"
+pretrained_model_path: "/home/pluhadiya/spd_out/train/t-a4d0f086/pingpong.pth"
+
+# --- Task Specific ---
+task_config:
+  task_name: pingpong
