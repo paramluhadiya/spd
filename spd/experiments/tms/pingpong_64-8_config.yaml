@@ -1,7 +1,7 @@
 # PingPong 64-8 (D=64, d=8, T=64 circuits, 3 layers)
 # --- WandB ---
 wandb_project: spd
-wandb_run_name: 4096-beta-balanced-5e-5
+wandb_run_name: 4096-beta-balanced-1e-4-layerwise-pgd-p-1
 wandb_run_name_prefix: ""
 
 # --- General ---
@@ -29,7 +29,7 @@ loss_metric_configs:
     coeff: 5.0
   - classname: "ImportanceMinimalityLoss"
     coeff: 1e-4  # NOTE: when beta=0, 2e-4 worked pretty well for 4096 batch size. 
-    pnorm: 2.0
+    pnorm: 1.0
     p_anneal_start_frac: 0.0
     p_anneal_end_frac: 1
     p_anneal_final_p: 0.4
@@ -62,7 +62,7 @@ batch_size: 4096
 eval_batch_size: 4096
 steps: 200000
 lr_schedule:
-  start_val: 5e-5
+  start_val: 1e-4
   final_val_frac: 0.1
   fn_type: cosine
   warmup_pct: 0.0
