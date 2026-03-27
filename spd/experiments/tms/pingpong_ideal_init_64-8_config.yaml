@@ -1,20 +1,19 @@
-# PingPong 64-8 (D=64, d=8, T=64 circuits, 3 layers)
+# PingPong 64-8 with ideal (ground-truth) initialization
+# C=600 per layer, beta=0. Components and CIs initialized to the true decomposition.
 # --- WandB ---
 wandb_project: spd
-wandb_run_name: 4096-beta-balanced-5e-5
+wandb_run_name: pingpong-ideal-init-large-ci-mlp-small-lr
 wandb_run_name_prefix: ""
 
 # --- General ---
 seed: 0
 n_mask_samples: 1
 ci_fn_type: "shared_mlp"
-ci_fn_hidden_dims: [2048, 2048]
+ci_fn_hidden_dims: [512]
 sigmoid_type: "leaky_hard"
 
-# Module decomposition: decompose the layer weight matrices
-# Each layer is (input_dim x input_dim) where input_dim = D + 2*num_blocks = 80
-# The c->c block (D x D) contains the actual circuit weights
-# PingPong uses nn.Sequential, so layers are model.0, model.2, model.4 (Linear layers)
+# Module decomposition: 3 layers, each (80 x 80)
+# C=600: 80 initialized to true decomposition, 520 random/off
 module_info:
   - module_pattern: "model.0"
     C: 600
@@ -28,29 +27,20 @@ loss_metric_configs:
   - classname: "FaithfulnessLoss"
     coeff: 5.0
   - classname: "ImportanceMinimalityLoss"
-    coeff: 1e-4  # NOTE: when beta=0, 2e-4 worked pretty well for 4096 batch size. 
+    coeff: 2e-4
     pnorm: 2.0
     p_anneal_start_frac: 0.0
     p_anneal_end_frac: 1
     p_anneal_final_p: 0.4
-    beta: 0.16 #TODO change this. We want to have nonzero beta. Might try this with beta = +inf by changing the minimality loss to only keep beta term. 
-  # - classname: "StochasticReconLoss"
-  #   coeff: 1.0
-  # Removing stochastic recon loss made the decomposition more sensible. 
-  - classname: "PGDReconLayerwiseLoss"
-    coeff: 10
-    init: "ones"
-    step_size: 0.5
-    n_steps: 4
-    mask_scope: "shared_across_batch"
+    beta: 0.0
   - classname: "PGDReconSubsetLoss"
-    coeff: 25
+    coeff: 20
     init: "ones"
     step_size: 0.5
     n_steps: 4
     mask_scope: "shared_across_batch"
   - classname: "PGDReconLoss"
-    coeff: 25
+    coeff: 20
     init: "ones"
     step_size: 0.5
     n_steps: 4
@@ -60,7 +50,7 @@ output_loss_type: mse
 # --- Training ---
 batch_size: 4096
 eval_batch_size: 4096
-steps: 200000
+steps: 100000
 lr_schedule:
   start_val: 5e-5
   final_val_frac: 0.1
@@ -68,9 +58,10 @@ lr_schedule:
   warmup_pct: 0.0
 
 # --- Faithfulness Warmup ---
-faithfulness_warmup_steps: 200
-faithfulness_warmup_lr: 0.01
-faithfulness_warmup_weight_decay: 0.1
+# Skip faithfulness warmup since we initialize to the true decomposition
+# faithfulness_warmup_steps: 0
+# faithfulness_warmup_lr: 0.01
+# faithfulness_warmup_weight_decay: 0.1
 
 # --- Logging & Saving ---
 train_log_freq: 100
@@ -107,3 +98,7 @@ pretrained_model_path: "/home/pluhadiya/spd_out/train/t-a4d0f086/pingpong.pth"
 # --- Task Specific ---
 task_config:
   task_name: pingpong
+  init_computational_components: ideal
+  init_indexing_components: ideal
+  init_computational_ci: ideal
+  init_indexing_ci: ideal

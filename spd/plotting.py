@@ -401,7 +401,10 @@ def plot_component_activation_density(
         ax = axs[row, col]
 
         data = density.detach().cpu().numpy()
-        ax.hist(data, bins=bins)
+        try:
+            ax.hist(data, bins=bins)
+        except ValueError:
+            ax.hist(data, bins="auto")
         ax.set_yscale("log")  # Beware, memory leak unless gc.collect() is called after eval loop
         ax.set_title(module_name)  # Add module name as title to each subplot
 

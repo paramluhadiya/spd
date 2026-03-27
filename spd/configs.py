@@ -89,12 +89,34 @@ class BSSTaskConfig(BaseConfig):
 
 
 class PingPongTaskConfig(BaseConfig):
-    """Task config for PingPong computation in superposition model."""
+    """Task config for PingPong computation in superposition model.
+
+    Component groups:
+      - computational: 64 components (one per neuron in the D-dimensional computational block)
+      - indexing: 16 components (8 one_hot_i + 8 one_hot_j for bias/mask + identity pass-through)
+
+    Constraint: if a component group is random, its CI must also be random.
+    """
 
     task_name: Literal["pingpong"] = Field(
         default="pingpong",
         description="Task identifier for PingPong model",
     )
+    init_computational_components: Literal["ideal", "random"] = "random"
+    init_indexing_components: Literal["ideal", "random"] = "random"
+    init_computational_ci: Literal["ideal", "random"] = "random"
+    init_indexing_ci: Literal["ideal", "random"] = "random"
+
+    @model_validator(mode="after")
+    def _random_components_require_random_ci(self) -> "PingPongTaskConfig":
+        assert not (
+            self.init_computational_components == "random"
+            and self.init_computational_ci == "ideal"
+        ), "Random computational components require random computational CI"
+        assert not (
+            self.init_indexing_components == "random" and self.init_indexing_ci == "ideal"
+        ), "Random indexing components require random indexing CI"
+        return self
 
 
 class ResidMLPTaskConfig(BaseConfig):
