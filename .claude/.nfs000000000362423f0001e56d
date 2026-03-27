@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(nvidia-smi:*)",
+      "Bash(sinfo:*)",
+      "Bash(squeue:*)",
+      "Bash(source:*)",
+      "Bash(basedpyright:*)",
+      "Bash(python scripts/view_active_components.py:*)",
+      "Bash(make:*)",
+      "Bash(python scripts/pingpong_ci_per_circuit.py:*)",
+      "Bash(scancel:*)",
+      "Bash(python:*)",
+      "Bash(ruff check spd/experiments/tms/pingpong_ideal_init_decomposition.py spd/run_spd.py spd/registry.py)",
+      "Bash(ruff check spd/experiments/tms/pingpong_ideal_init_decomposition.py)",
+      "Bash(ruff check spd/experiments/tms/pingpong_ideal_init_decomposition.py spd/configs.py)",
+      "Bash(ls /home/pluhadiya/spd/wandb/s-e2e8fb27/files/model_*.pth)",
+      "Bash(sort -t_ -k2 -n)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "svelte-llm"
+  ]
+}
