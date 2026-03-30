@@ -123,14 +123,12 @@ def main() -> None:
     args = parser.parse_args()
 
     api = wandb.Api()
-    # spd-run tags runs with slurm-array-job-id, but the run_id is in the run name
-    # Query all runs and filter by name prefix matching the sweep's wandb_run_name pattern
     all_runs = api.runs(
         args.project,
-        filters={"config.wandb_run_name": {"$regex": "^pingpong-probe"}},
+        filters={"config.wandb_run_name": {"$regex": "^pingpong_probe_64-8-"}},
     )
     runs = [r for r in all_runs if r.state == "finished"]
-    print(f"Found {len(runs)} finished pingpong-probe runs")
+    print(f"Found {len(runs)} finished pingpong_probe runs")
 
     results: list[dict] = []
 
