@@ -123,11 +123,11 @@ def main() -> None:
     args = parser.parse_args()
 
     api = wandb.Api()
-    all_runs = api.runs(
-        args.project,
-        filters={"display_name": {"$regex": "^pingpong_probe_64-8-"}},
-    )
-    runs = [r for r in all_runs if r.state == "finished"]
+    all_runs = api.runs(args.project, per_page=100, order="-created_at")
+    runs = [
+        r for r in all_runs
+        if r.state == "finished" and r.name.startswith("pingpong_probe_64-8-")
+    ]
     print(f"Found {len(runs)} finished pingpong_probe runs")
 
     results: list[dict] = []
