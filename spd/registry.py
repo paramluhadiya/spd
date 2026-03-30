@@ -81,6 +81,13 @@ EXPERIMENT_REGISTRY: dict[str, ExperimentConfig] = {
         expected_runtime=60,
         canonical_run=None,
     ),
+    "pingpong_probe_64-8": ExperimentConfig(
+        task_name="pingpong",
+        decomp_script=Path("spd/experiments/tms/pingpong_percircuit_ideal_init_decomposition.py"),
+        config_path=Path("spd/experiments/tms/pingpong_probe_64-8_config.yaml"),
+        expected_runtime=20,
+        canonical_run=None,
+    ),
     "resid_mlp1": ExperimentConfig(
         task_name="resid_mlp",
         decomp_script=Path("spd/experiments/resid_mlp/resid_mlp_decomposition.py"),

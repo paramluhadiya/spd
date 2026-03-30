@@ -13,13 +13,13 @@ import torch
 from spd.configs import Config
 from spd.experiments.tms.bss_models import PingPongModel, PingPongTargetRunInfo
 from spd.experiments.tms.pingpong_percircuit_ideal_init_decomposition import (
-    D,
     LAYER_ROUTING,
     N_COMPUTATIONAL,
     N_OHI,
     N_OHJ,
     N_TRUE,
     NUM_BLOCKS,
+    D,
     comp_index,
     d,
     initialize_ci_fns_from_ground_truth,

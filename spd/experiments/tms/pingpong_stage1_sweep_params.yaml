@@ -1,0 +1,20 @@
+# Stage 1: Ideal components, random CI
+# Sweep: 4 LRs x 3 ImpMin coeffs x 3 anneal fracs = 36 configs
+
+global:
+  lr_schedule:
+    start_val:
+      values: [0.00005, 0.0001, 0.0003, 0.0005]
+  loss_metric_configs:
+    - classname: "ImportanceMinimalityLoss"
+      coeff:
+        values: [0.00005, 0.0001, 0.0002]
+      p_anneal_end_frac:
+        values: [0.3, 0.5, 1.0]
+  task_config:
+    init_computational_ci:
+      values: ["random"]
+    init_indexing_ci:
+      values: ["random"]
+
+pingpong_probe_64-8: {}

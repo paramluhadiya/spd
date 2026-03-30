@@ -16,12 +16,10 @@ from spd.configs import Config
 from spd.experiments.tms.bss_models import PingPongModel, PingPongTargetRunInfo
 from spd.experiments.tms.pingpong_decomposition import PingPongDataset
 from spd.experiments.tms.pingpong_percircuit_ideal_init_decomposition import (
-    D,
     LAYER_ROUTING,
-    N_COMPUTATIONAL,
-    N_INDEXING,
     N_TRUE,
     NUM_BLOCKS,
+    D,
     comp_index,
     d,
     initialize_ci_fns_from_ground_truth,
@@ -30,7 +28,7 @@ from spd.experiments.tms.pingpong_percircuit_ideal_init_decomposition import (
     ohj_index,
     scale_down_unused_components,
 )
-from spd.models.component_model import ComponentModel, SPDRunInfo
+from spd.models.component_model import ComponentModel
 from spd.utils.module_utils import expand_module_patterns
 
 CONFIG_PATH = "spd/experiments/tms/pingpong_percircuit_ideal_init_64-8_config.yaml"
@@ -255,7 +253,7 @@ def eval_random_data(model: ComponentModel, target_model: PingPongModel, label: 
             ci_l0_per_layer[layer_name] += (ci_vals > 0.1).float().mean().item()
 
     print(f"  Mean output MSE: {total_mse / n_batches:.6e}")
-    print(f"  Mean CI-L0 (fraction > 0.1):")
+    print("  Mean CI-L0 (fraction > 0.1):")
     for layer_name in LAYER_NAMES:
         mean_l0 = ci_l0_per_layer[layer_name] / n_batches
         approx_n_active = mean_l0 * 600
