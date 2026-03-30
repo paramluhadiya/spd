@@ -4,8 +4,8 @@ Pulls metrics from WandB, ranks configs by how well they approach the ideal
 L0 targets while maintaining low faithfulness and PGD reconstruction loss.
 
 Usage:
-    python scripts/score_pingpong_sweep.py <sweep_id>
-    python scripts/score_pingpong_sweep.py <sweep_id> --project paramluhadiya/spd
+    python scripts/score_pingpong_sweep.py <run_id>
+    python scripts/score_pingpong_sweep.py <run_id> --project paramluhadiya/spd
 """
 
 import argparse
@@ -118,21 +118,23 @@ def extract_sweep_params(run: wandb.apis.public.Run) -> dict[str, str]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("sweep_id", type=str, help="WandB sweep ID")
+    parser.add_argument("run_id", type=str, help="spd-run run ID (e.g. run_20260330_203919)")
     parser.add_argument("--project", type=str, default="paramluhadiya/spd")
     args = parser.parse_args()
 
     api = wandb.Api()
-    sweep = api.sweep(f"{args.project}/sweeps/{args.sweep_id}")
-    runs = list(sweep.runs)
-    print(f"Found {len(runs)} runs in sweep {args.sweep_id}")
+    # spd-run tags runs with slurm-array-job-id, but the run_id is in the run name
+    # Query all runs and filter by name prefix matching the sweep's wandb_run_name pattern
+    all_runs = api.runs(
+        args.project,
+        filters={"config.wandb_run_name": {"$regex": "^pingpong-probe"}},
+    )
+    runs = [r for r in all_runs if r.state == "finished"]
+    print(f"Found {len(runs)} finished pingpong-probe runs")
 
     results: list[dict] = []
 
     for run in runs:
-        if run.state != "finished":
-            continue
-
         metrics = fetch_run_metrics(run)
         if metrics is None:
             continue
