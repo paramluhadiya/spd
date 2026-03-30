@@ -125,7 +125,7 @@ def main() -> None:
     api = wandb.Api()
     all_runs = api.runs(
         args.project,
-        filters={"config.wandb_run_name": {"$regex": "^pingpong_probe_64-8-"}},
+        filters={"display_name": {"$regex": "^pingpong_probe_64-8-"}},
     )
     runs = [r for r in all_runs if r.state == "finished"]
     print(f"Found {len(runs)} finished pingpong_probe runs")
