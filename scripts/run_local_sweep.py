@@ -8,8 +8,10 @@ Usage:
 
 import argparse
 import json
+import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import yaml
@@ -44,38 +46,46 @@ def main() -> None:
     base_config = Config.from_file(exp_config.config_path)
     script_path = REPO_ROOT / exp_config.decomp_script
 
-    # Build commands with CUDA_VISIBLE_DEVICES round-robin
-    commands: list[tuple[str, dict[str, str]]] = []
+    # Write each config to a temp file to avoid shell quoting issues
+    config_files: list[tuple[Path, dict[str, str], int]] = []
+    tmp_dir = Path(tempfile.mkdtemp(prefix="spd_sweep_"))
+
     for i, param_combo in enumerate(combinations):
         config_dict = base_config.model_dump(mode="json")
         config_dict = apply_nested_updates(config_dict, param_combo)
 
-        # Build a short run name from the swept params
         name_parts = []
         for k, v in param_combo.items():
             short_key = k.split(".")[-1]
             name_parts.append(f"{short_key}-{v}")
         config_dict["wandb_run_name"] = f"{args.experiment}-{'-'.join(name_parts)}"
 
-        config_json = "json:" + json.dumps(config_dict)
+        config_path = tmp_dir / f"config_{i:03d}.json"
+        with open(config_path, "w") as f:
+            json.dump(config_dict, f)
+
         gpu_id = i % args.n_gpus
         env = {"CUDA_VISIBLE_DEVICES": str(gpu_id)}
-        cmd = f'{sys.executable} {script_path} --config_json "{config_json}"'
-        commands.append((cmd, env))
+        config_files.append((config_path, env, i))
 
     # Run in batches of n_gpus
     batch_size = args.n_gpus
-    for batch_start in range(0, len(commands), batch_size):
-        batch = commands[batch_start : batch_start + batch_size]
-        batch_end = min(batch_start + batch_size, len(commands))
+    for batch_start in range(0, len(config_files), batch_size):
+        batch = config_files[batch_start : batch_start + batch_size]
+        batch_end = min(batch_start + batch_size, len(config_files))
         print(f"\n--- Batch {batch_start // batch_size + 1}: "
-              f"runs {batch_start + 1}-{batch_end} of {len(commands)} ---")
+              f"runs {batch_start + 1}-{batch_end} of {len(config_files)} ---")
 
         procs: list[subprocess.Popen[bytes]] = []
-        for cmd, env in batch:
-            import os
+        for config_path, env, idx in batch:
             full_env = {**os.environ, **env}
-            proc = subprocess.Popen(cmd, shell=True, env=full_env)
+            cmd = [
+                sys.executable,
+                str(script_path),
+                "--config_json",
+                "json:" + config_path.read_text(),
+            ]
+            proc = subprocess.Popen(cmd, env=full_env)
             procs.append(proc)
 
         for proc in procs:
@@ -83,7 +93,7 @@ def main() -> None:
             if proc.returncode != 0:
                 print(f"WARNING: Process {proc.pid} exited with code {proc.returncode}")
 
-    print("\nAll runs complete.")
+    print(f"\nAll runs complete. Temp configs in: {tmp_dir}")
 
 
 if __name__ == "__main__":
