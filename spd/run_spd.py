@@ -1,6 +1,8 @@
 """Run SPD on a model."""
 
 import gc
+import json
+import os
 from collections import defaultdict
 from collections.abc import Iterator
 from pathlib import Path
@@ -109,6 +111,21 @@ def get_unique_metric_configs(
                 f"{type(cfg).__name__} is in both loss and eval configs, only including eval config"
             )
     return eval_metric_configs
+
+
+def _write_optuna_metrics(metrics: dict, step: int) -> None:
+    """Write metrics to JSONL file for Optuna sweep monitoring.
+
+    Only writes if OPTUNA_METRICS_PATH is set in the environment.
+    Extracts numeric scalar metrics only (skips images/tables).
+    """
+    metrics_path = os.environ.get("OPTUNA_METRICS_PATH")
+    if metrics_path is None:
+        return
+    scalar_metrics = {k: float(v) for k, v in metrics.items() if isinstance(v, (int, float))}
+    scalar_metrics["step"] = step
+    with open(metrics_path, "a") as f:
+        f.write(json.dumps(scalar_metrics) + "\n")
 
 
 def optimize(
@@ -365,6 +382,7 @@ def optimize(
                     for k, v in metrics.items():
                         tqdm.write(f"eval/{k}: {v}")
                     local_log(metrics, step, out_dir)
+                    _write_optuna_metrics(metrics, step)
                     if config.wandb_project:
                         wandb_logs = {
                             f"eval/{k}": wandb.Image(v) if isinstance(v, Image.Image) else v
