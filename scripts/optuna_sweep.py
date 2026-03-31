@@ -22,7 +22,7 @@ from queue import Queue
 import optuna
 
 from spd.registry import EXPERIMENT_REGISTRY
-from spd.settings import REPO_ROOT
+from spd.settings import REPO_ROOT, SPD_OUT_DIR
 
 METRICS_DIR = Path("/tmp/spd_optuna_metrics")
 
@@ -195,7 +195,7 @@ def main() -> None:
     for i in range(args.n_gpus):
         gpu_queue.put(i)
 
-    db_path = REPO_ROOT / "optuna_studies.db"
+    db_path = SPD_OUT_DIR / "optuna_studies.db"
     storage = f"sqlite:///{db_path}"
 
     study = optuna.create_study(
