@@ -70,7 +70,7 @@ def create_objective(experiment: str, gpu_queue: Queue):
 
     def objective(trial: optuna.Trial) -> tuple[float, float]:
         # --- Suggest hyperparameters ---
-        lr = trial.suggest_float("lr", 5e-5, 2e-3, log=True)
+        lr = trial.suggest_float("lr", 1e-4, 2e-3, log=True)
         imp_coeff = trial.suggest_float("imp_coeff", 5e-5, 1e-3, log=True)
         p_anneal_end_frac = trial.suggest_float("p_anneal_end_frac", 0.2, 1.0)
         beta = trial.suggest_float("beta", 0.05, 0.5)
@@ -202,7 +202,7 @@ def main() -> None:
         study_name=args.study_name,
         storage=storage,
         directions=["minimize", "minimize"],  # l0_distance, pgd_loss
-        sampler=optuna.samplers.MOTPESampler(n_startup_trials=16),
+        sampler=optuna.samplers.MOTPESampler(n_startup_trials=8),
         pruner=optuna.pruners.HyperbandPruner(
             min_resource=4000,
             max_resource=25000,
