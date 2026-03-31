@@ -1,0 +1,28 @@
+# Stage 2: Both components and CI random (full random init)
+# Stage 1 found: lr=1e-4, imp_coeff=2e-4, anneal=1.0 for CI-only learning.
+# Now learning everything from scratch — LR centered around 1e-4.
+# Note: Stage 2 skips "random components + ideal CI" because the validator
+# correctly prevents it (ideal CI assumes specific component positions).
+# Sweep: 4 LRs x 3 ImpMin coeffs x 3 anneal fracs = 36 configs
+
+global:
+  lr_schedule:
+    start_val:
+      values: [0.00005, 0.0001, 0.0002, 0.0003]
+  loss_metric_configs:
+    - classname: "ImportanceMinimalityLoss"
+      coeff:
+        values: [0.0001, 0.0002, 0.0005]
+      p_anneal_end_frac:
+        values: [0.3, 0.5, 1.0]
+  task_config:
+    init_computational_components:
+      values: ["random"]
+    init_indexing_components:
+      values: ["random"]
+    init_computational_ci:
+      values: ["random"]
+    init_indexing_ci:
+      values: ["random"]
+
+pingpong_probe_64-8: {}
