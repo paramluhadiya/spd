@@ -202,7 +202,7 @@ def main() -> None:
         study_name=args.study_name,
         storage=storage,
         directions=["minimize", "minimize"],  # l0_distance, pgd_loss
-        sampler=optuna.samplers.MOTPESampler(n_startup_trials=8),
+        sampler=optuna.samplers.TPESampler(n_startup_trials=8),
         pruner=optuna.pruners.HyperbandPruner(
             min_resource=4000,
             max_resource=25000,
