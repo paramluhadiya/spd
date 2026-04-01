@@ -133,10 +133,6 @@ def create_objective(experiment: str, gpu_queue: Queue):
                 pgd = latest.get(PGD_KEY, 999.0)
                 faith = latest.get(FAITH_KEY, 999.0)
 
-                # Report composite metric for Optuna's pruner
-                l0_dist = compute_l0_distance(latest)
-                trial.report(l0_dist + 10 * pgd, step=step)
-
                 # Hard prune: clearly bad runs
                 if step >= PRUNE_AFTER_STEPS:
                     if pgd > PRUNE_PGD_THRESHOLD:
@@ -149,13 +145,6 @@ def create_objective(experiment: str, gpu_queue: Queue):
                         proc.send_signal(signal.SIGTERM)
                         proc.wait(timeout=30)
                         raise optuna.TrialPruned()
-
-                # Optuna's statistical pruning
-                if trial.should_prune():
-                    print(f"  Trial {trial.number}: PRUNED by Optuna at step {step}")
-                    proc.send_signal(signal.SIGTERM)
-                    proc.wait(timeout=30)
-                    raise optuna.TrialPruned()
 
             if proc.returncode != 0:
                 raise optuna.TrialPruned()
@@ -203,11 +192,6 @@ def main() -> None:
         storage=storage,
         directions=["minimize", "minimize"],  # l0_distance, pgd_loss
         sampler=optuna.samplers.TPESampler(n_startup_trials=8),
-        pruner=optuna.pruners.HyperbandPruner(
-            min_resource=4000,
-            max_resource=25000,
-            reduction_factor=3,
-        ),
         load_if_exists=args.resume,
     )
 
