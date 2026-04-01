@@ -33,6 +33,7 @@ dependencies = [
     "uvicorn",
     "openrouter>=0.1.1",
     "httpx>=0.28.0",
+    "optuna>=4.8.0",
 ]
 
 [dependency-groups]
