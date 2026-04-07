@@ -4,8 +4,9 @@ Takes the best HP configs from an Optuna probe sweep and runs them for more step
 
 Usage:
     python scripts/submit_top_optuna_runs.py                    # 200k steps, top 5
-    python scripts/submit_top_optuna_runs.py --steps 100000     # 100k steps
-    python scripts/submit_top_optuna_runs.py --n_top 3          # only top 3
+    python scripts/submit_top_optuna_runs.py --steps 100000             # 100k steps
+    python scripts/submit_top_optuna_runs.py --n_top 3                  # only top 3
+    python scripts/submit_top_optuna_runs.py --pgd_coeff_override 250   # override PGD coeff
 """
 
 import argparse
@@ -32,6 +33,8 @@ def main() -> None:
     parser.add_argument("--experiment", type=str, default="pingpong_probe_64-8")
     parser.add_argument("--steps", type=int, default=200_000)
     parser.add_argument("--n_top", type=int, default=5)
+    parser.add_argument("--pgd_coeff_override", type=float, default=None,
+                        help="Override PGD coeff for all runs (e.g. 250)")
     parser.add_argument("--partition", type=str, default="compute")
     parser.add_argument("--time", type=str, default="48:00:00")
     # Init config
@@ -56,19 +59,23 @@ def main() -> None:
     base_config = Config.from_file(base_config_path)
     configs_to_run = TOP_CONFIGS[: args.n_top]
 
-    wandb_group = f"pingpong_long_{args.steps // 1000}k"
+    pgd_suffix = f"_pgd{int(args.pgd_coeff_override)}" if args.pgd_coeff_override else ""
+    wandb_group = f"pingpong_long_{args.steps // 1000}k{pgd_suffix}"
     print(f"Submitting {len(configs_to_run)} runs @ {args.steps} steps")
+    if args.pgd_coeff_override:
+        print(f"PGD coeff override: {args.pgd_coeff_override}")
     print(f"WandB group: {wandb_group}")
 
     for cfg in configs_to_run:
+        pgd_coeff = args.pgd_coeff_override if args.pgd_coeff_override else cfg["pgd_coeff"]
         overrides = {
             "steps": args.steps,
             "lr_schedule.start_val": cfg["lr"],
             "loss_metric_configs.ImportanceMinimalityLoss.coeff": cfg["imp_coeff"],
             "loss_metric_configs.ImportanceMinimalityLoss.p_anneal_end_frac": 1.0,
             "loss_metric_configs.ImportanceMinimalityLoss.beta": cfg["beta"],
-            "loss_metric_configs.PGDReconLoss.coeff": cfg["pgd_coeff"],
-            "loss_metric_configs.PGDReconSubsetLoss.coeff": cfg["pgd_coeff"],
+            "loss_metric_configs.PGDReconLoss.coeff": pgd_coeff,
+            "loss_metric_configs.PGDReconSubsetLoss.coeff": pgd_coeff,
             "task_config.init_computational_components": args.init_comp,
             "task_config.init_indexing_components": args.init_idx,
             "task_config.init_computational_ci": args.init_comp_ci,
@@ -82,7 +89,7 @@ def main() -> None:
         label = cfg["label"]
         config_dict["wandb_run_name"] = (
             f"long-{label}-lr{cfg['lr']:.0e}-imp{cfg['imp_coeff']:.0e}"
-            f"-b{cfg['beta']:.2f}-pgd{cfg['pgd_coeff']:.0f}"
+            f"-b{cfg['beta']:.2f}-pgd{pgd_coeff:.0f}"
         )
 
         config_json = "json:" + json.dumps(config_dict)
@@ -107,7 +114,7 @@ def main() -> None:
 
         print(
             f"  {label}: lr={cfg['lr']:.0e}, imp={cfg['imp_coeff']:.0e}, "
-            f"beta={cfg['beta']:.3f}, pgd={cfg['pgd_coeff']:.0f}  "
+            f"beta={cfg['beta']:.3f}, pgd={pgd_coeff:.0f}  "
             f"→ Job {result.job_id}"
         )
 
