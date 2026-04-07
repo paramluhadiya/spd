@@ -470,6 +470,10 @@ class Config(BaseConfig):
         default="",
         description="Prefix prepended to an auto-generated WandB run name",
     )
+    save_checkpoints_to_wandb: bool = Field(
+        default=False,
+        description="Whether to upload checkpoint .pth files to WandB. Disable to save storage.",
+    )
 
     # --- General ---
     seed: int = Field(default=0, description="Random seed for reproducibility")

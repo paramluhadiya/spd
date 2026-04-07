@@ -404,7 +404,7 @@ def optimize(
             # Save the state dict of the underlying module (not DDP wrapper)
             save_file(component_model.state_dict(), out_dir / f"model_{step}.pth")
             logger.info(f"Saved model, optimizer, and out_dir to {out_dir}")
-            if config.wandb_project:
+            if config.wandb_project and config.save_checkpoints_to_wandb:
                 try_wandb(
                     wandb.save,
                     str(out_dir / f"model_{step}.pth"),

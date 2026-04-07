@@ -1,12 +1,14 @@
 """Dynamic hyperparameter sweep using Optuna with Bayesian optimization and pruning.
 
 Runs trials across multiple GPUs, monitors metrics via JSONL files,
-and prunes clearly bad runs early. Uses MOTPESampler for multi-objective
+and prunes clearly bad runs early. Uses TPESampler for multi-objective
 Bayesian optimization.
 
 Usage:
     python scripts/optuna_sweep.py --n_gpus 8 --n_trials 50
-    python scripts/optuna_sweep.py --n_gpus 8 --n_trials 50 --resume  # resume existing study
+    python scripts/optuna_sweep.py --n_gpus 8 --n_trials 50 --resume
+    python scripts/optuna_sweep.py --n_gpus 8 --n_trials 50 \
+        --init_comp random --init_idx ideal --init_comp_ci random --init_idx_ci random
 """
 
 import argparse
@@ -27,7 +29,6 @@ from spd.settings import REPO_ROOT, SPD_OUT_DIR
 METRICS_DIR = Path("/tmp/spd_optuna_metrics")
 
 # Metric keys in the JSONL files (without eval/ prefix)
-L0_KEYS = [f"l0/0.1_model.{i}" for i in [0, 2, 4]]
 FAITH_KEY = "loss/FaithfulnessLoss"
 PGD_KEY = "loss/PGDReconLoss"
 
@@ -58,7 +59,15 @@ def compute_l0_distance(metrics: dict) -> float:
     return total
 
 
-def create_objective(experiment: str, gpu_queue: Queue):
+def create_objective(
+    experiment: str,
+    gpu_queue: Queue,
+    init_comp: str,
+    init_idx: str,
+    init_comp_ci: str,
+    init_idx_ci: str,
+    wandb_group: str | None,
+):
     exp_config = EXPERIMENT_REGISTRY[experiment]
     script_path = REPO_ROOT / exp_config.decomp_script
     base_config_path = REPO_ROOT / exp_config.config_path
@@ -70,30 +79,30 @@ def create_objective(experiment: str, gpu_queue: Queue):
 
     def objective(trial: optuna.Trial) -> tuple[float, float]:
         # --- Suggest hyperparameters ---
-        lr = trial.suggest_float("lr", 1e-4, 2e-3, log=True)
-        imp_coeff = trial.suggest_float("imp_coeff", 5e-5, 1e-3, log=True)
-        p_anneal_end_frac = trial.suggest_float("p_anneal_end_frac", 0.2, 1.0)
-        beta = trial.suggest_float("beta", 0.05, 0.5)
-        pgd_coeff = trial.suggest_float("pgd_coeff", 10.0, 50.0)
+        lr = trial.suggest_float("lr", 1e-4, 1e-3, log=True)
+        imp_coeff = trial.suggest_float("imp_coeff", 5e-5, 5e-4, log=True)
+        beta = trial.suggest_float("beta", 0.08, 0.3)
+        pgd_coeff = trial.suggest_float("pgd_coeff", 15.0, 40.0)
 
         # --- Build config ---
         overrides = {
             "lr_schedule.start_val": lr,
             "loss_metric_configs.ImportanceMinimalityLoss.coeff": imp_coeff,
-            "loss_metric_configs.ImportanceMinimalityLoss.p_anneal_end_frac": p_anneal_end_frac,
+            "loss_metric_configs.ImportanceMinimalityLoss.p_anneal_end_frac": 1.0,
             "loss_metric_configs.ImportanceMinimalityLoss.beta": beta,
             "loss_metric_configs.PGDReconLoss.coeff": pgd_coeff,
             "loss_metric_configs.PGDReconSubsetLoss.coeff": pgd_coeff,
-            "task_config.init_computational_components": "random",
-            "task_config.init_indexing_components": "random",
-            "task_config.init_computational_ci": "random",
-            "task_config.init_indexing_ci": "random",
+            "task_config.init_computational_components": init_comp,
+            "task_config.init_indexing_components": init_idx,
+            "task_config.init_computational_ci": init_comp_ci,
+            "task_config.init_indexing_ci": init_idx_ci,
+            "save_freq": None,
         }
 
         config_dict = base_config.model_dump(mode="json")
         config_dict = apply_nested_updates(config_dict, overrides)
         config_dict["wandb_run_name"] = (
-            f"optuna-t{trial.number}-lr{lr:.0e}-imp{imp_coeff:.0e}-ann{p_anneal_end_frac:.1f}"
+            f"optuna-t{trial.number}-lr{lr:.0e}-imp{imp_coeff:.0e}-b{beta:.2f}-pgd{pgd_coeff:.0f}"
         )
 
         # --- GPU assignment via queue ---
@@ -108,6 +117,8 @@ def create_objective(experiment: str, gpu_queue: Queue):
                 "CUDA_VISIBLE_DEVICES": str(gpu_id),
                 "OPTUNA_METRICS_PATH": str(metrics_path),
             }
+            if wandb_group:
+                env["WANDB_RUN_GROUP"] = wandb_group
 
             config_json = "json:" + json.dumps(config_dict)
             proc = subprocess.Popen(
@@ -173,6 +184,15 @@ def main() -> None:
     parser.add_argument("--n_trials", type=int, default=50)
     parser.add_argument("--study_name", type=str, default="pingpong_random_init")
     parser.add_argument("--resume", action="store_true")
+    # Init config (default: all random)
+    parser.add_argument("--init_comp", type=str, default="random",
+                        choices=["ideal", "random"])
+    parser.add_argument("--init_idx", type=str, default="random",
+                        choices=["ideal", "random"])
+    parser.add_argument("--init_comp_ci", type=str, default="random",
+                        choices=["ideal", "random"])
+    parser.add_argument("--init_idx_ci", type=str, default="random",
+                        choices=["ideal", "random"])
     args = parser.parse_args()
 
     assert args.experiment in EXPERIMENT_REGISTRY
@@ -195,10 +215,21 @@ def main() -> None:
         load_if_exists=args.resume,
     )
 
-    objective = create_objective(args.experiment, gpu_queue)
+    wandb_group = args.study_name
+    objective = create_objective(
+        args.experiment, gpu_queue,
+        init_comp=args.init_comp,
+        init_idx=args.init_idx,
+        init_comp_ci=args.init_comp_ci,
+        init_idx_ci=args.init_idx_ci,
+        wandb_group=wandb_group,
+    )
 
+    init_desc = f"comp={args.init_comp}, idx={args.init_idx}, comp_ci={args.init_comp_ci}, idx_ci={args.init_idx_ci}"
     print(f"Starting Optuna sweep: {args.n_trials} trials across {args.n_gpus} GPUs")
     print(f"Study: {args.study_name} (storage: {db_path})")
+    print(f"Init: {init_desc}")
+    print(f"WandB group: {wandb_group}")
 
     study.optimize(
         objective,
@@ -225,7 +256,7 @@ def main() -> None:
         print(
             f"  Trial {t.number}: L0_dist={t.values[0]:.2f}, PGD={t.values[1]:.4f}, "
             f"lr={t.params['lr']:.0e}, imp={t.params['imp_coeff']:.0e}, "
-            f"anneal={t.params['p_anneal_end_frac']:.2f}, beta={t.params['beta']:.3f}"
+            f"beta={t.params['beta']:.3f}, pgd_coeff={t.params['pgd_coeff']:.0f}"
         )
 
     pruned = [t for t in study.trials if t.state == optuna.trial.TrialState.PRUNED]
