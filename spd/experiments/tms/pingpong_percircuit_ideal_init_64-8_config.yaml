@@ -5,7 +5,7 @@
 
 # --- WandB ---
 wandb_project: spd
-wandb_run_name: pingpong-percircuit-ideal
+wandb_run_name: pingpong-percircuit-ideal-indexing
 wandb_run_name_prefix: ""
 
 # --- General ---
@@ -55,7 +55,7 @@ batch_size: 4096
 eval_batch_size: 4096
 steps: 100000
 lr_schedule:
-  start_val: 1e-5
+  start_val: 3e-4
   final_val_frac: 0.1
   fn_type: cosine
   warmup_pct: 0.0
@@ -100,7 +100,7 @@ pretrained_model_path: "/home/pluhadiya/spd_out/train/t-a4d0f086/pingpong.pth"
 # --- Task Specific ---
 task_config:
   task_name: pingpong
-  init_computational_components: ideal
+  init_computational_components: random
   init_indexing_components: ideal
-  init_computational_ci: ideal
+  init_computational_ci: random
   init_indexing_ci: ideal
