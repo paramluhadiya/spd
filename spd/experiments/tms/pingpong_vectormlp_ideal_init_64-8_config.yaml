@@ -14,7 +14,7 @@
 
 # --- WandB ---
 wandb_project: spd
-wandb_run_name: pingpong-vectormlp-ideal-masking-init
+wandb_run_name: pingpong-vectormlp-ideal-masking-init-lr-5e-5
 wandb_run_name_prefix: ""
 
 # --- General ---
@@ -39,7 +39,7 @@ loss_metric_configs:
   - classname: "FaithfulnessLoss"
     coeff: 5.0
   - classname: "ImportanceMinimalityLoss"
-    coeff: 5e-5
+    coeff: 1e-4
     pnorm: 2.0
     p_anneal_start_frac: 0.0
     p_anneal_end_frac: 1
@@ -64,7 +64,7 @@ batch_size: 4096
 eval_batch_size: 4096
 steps: 100000
 lr_schedule:
-  start_val: 3e-4
+  start_val: 5e-5
   final_val_frac: 0.1
   fn_type: cosine
   warmup_pct: 0.0
