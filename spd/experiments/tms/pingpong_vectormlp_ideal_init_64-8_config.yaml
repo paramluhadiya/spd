@@ -14,14 +14,14 @@
 
 # --- WandB ---
 wandb_project: spd
-wandb_run_name: pingpong-vectormlp-ideal-masking-init
+wandb_run_name: pingpong-vectormlp-ideal-masking-init-lr-5e-5
 wandb_run_name_prefix: ""
 
 # --- General ---
 seed: 0
 n_mask_samples: 1
 ci_fn_type: "vector_mlp"
-ci_fn_hidden_dims: [16, 16]
+ci_fn_hidden_dims: [64, 64]
 sigmoid_type: "leaky_hard"
 
 # Module decomposition: 3 layers, each (80 x 80)
@@ -39,7 +39,7 @@ loss_metric_configs:
   - classname: "FaithfulnessLoss"
     coeff: 5.0
   - classname: "ImportanceMinimalityLoss"
-    coeff: 5e-5
+    coeff: 2e-4
     pnorm: 2.0
     p_anneal_start_frac: 0.0
     p_anneal_end_frac: 1
@@ -62,9 +62,9 @@ output_loss_type: mse
 # --- Training ---
 batch_size: 4096
 eval_batch_size: 4096
-steps: 100000
+steps: 200000
 lr_schedule:
-  start_val: 3e-4
+  start_val: 1e-4
   final_val_frac: 0.1
   fn_type: cosine
   warmup_pct: 0.0
