@@ -140,6 +140,112 @@ def scale_down_unused_components(component_model: ComponentModel) -> None:
             components.U.data[N_TRUE:, :] *= 0.01
 
 
+def initialize_indexing_ci_fns_only(
+    component_model: ComponentModel,
+    target_model: PingPongModel,
+) -> None:
+    """Initialize CI functions for the 16 indexing components only.
+
+    Selectively sets the ohi/ohj detector and pass-through hidden dims in the
+    3-layer shared MLP, leaving the neuron/AND hidden dims (used by computational
+    CIs) at their random initialization.
+
+    Layer 0: zero ohi/ohj input rows and detector columns, then set detectors.
+    Layer 1: zero ohi/ohj h1→h2 rows and pass-through columns, then set pass-through.
+    Layer 2: zero ohi/ohj h2 rows and output columns, then set output connections.
+    """
+    S = 50.0
+    t = 1.0
+
+    for module_name in component_model.target_module_paths:
+        ci_fn = component_model.ci_fns[module_name]
+        assert isinstance(ci_fn, VectorSharedMLPCiFn)
+
+        layer0 = ci_fn.layers[0]
+        layer1 = ci_fn.layers[2]
+        layer2 = ci_fn.layers[4]
+        assert isinstance(layer0, Linear)
+        assert isinstance(layer1, Linear)
+        assert isinstance(layer2, Linear)
+
+        assert layer0.W.shape[1] >= N_IDEAL_H1
+        assert layer1.W.shape[1] >= N_IDEAL_H2
+
+        with torch.no_grad():
+            # --- Layer 0: isolate ohi/ohj input rows and detector columns ---
+            # Zero detector columns so random inputs don't affect them
+            layer0.W.data[:, H1_OHI_START:N_IDEAL_H1] = 0.0
+            # Zero ohi/ohj input rows so they don't leak into neuron hidden dims
+            layer0.W.data[D : D + 2 * NUM_BLOCKS, :] = 0.0
+
+            for i in range(N_OHI):
+                h_pos = H1_OHI_START + 2 * i
+                h_neg = h_pos + 1
+                layer0.W.data[D + i, h_pos] = S
+                layer0.W.data[D + i, h_neg] = S
+                layer0.b.data[h_pos] = -t
+                layer0.b.data[h_neg] = -(t + 1)
+
+            for j in range(N_OHJ):
+                h_pos = H1_OHJ_START + 2 * j
+                h_neg = h_pos + 1
+                layer0.W.data[D + NUM_BLOCKS + j, h_pos] = S
+                layer0.W.data[D + NUM_BLOCKS + j, h_neg] = S
+                layer0.b.data[h_pos] = -t
+                layer0.b.data[h_neg] = -(t + 1)
+
+            # --- Layer 1: ohi/ohj pass-through ---
+            # Zero h1 rows and h2 columns for the ohi/ohj subspace
+            layer1.W.data[H1_OHI_START:N_IDEAL_H1, :] = 0.0
+            layer1.W.data[:, H2_OHI_START:N_IDEAL_H2] = 0.0
+
+            for i in range(N_OHI):
+                h1_pos = H1_OHI_START + 2 * i
+                h1_neg = h1_pos + 1
+                h2_pos = H2_OHI_START + 2 * i
+                h2_neg = h2_pos + 1
+                layer1.W.data[h1_pos, h2_pos] = S
+                layer1.W.data[h1_neg, h2_pos] = -S
+                layer1.W.data[h1_pos, h2_neg] = S
+                layer1.W.data[h1_neg, h2_neg] = -S
+                layer1.b.data[h2_pos] = -t
+                layer1.b.data[h2_neg] = -(t + 1)
+
+            for j in range(N_OHJ):
+                h1_pos = H1_OHJ_START + 2 * j
+                h1_neg = h1_pos + 1
+                h2_pos = H2_OHJ_START + 2 * j
+                h2_neg = h2_pos + 1
+                layer1.W.data[h1_pos, h2_pos] = S
+                layer1.W.data[h1_neg, h2_pos] = -S
+                layer1.W.data[h1_pos, h2_neg] = S
+                layer1.W.data[h1_neg, h2_neg] = -S
+                layer1.b.data[h2_pos] = -t
+                layer1.b.data[h2_neg] = -(t + 1)
+
+            # --- Layer 2: output connections for ohi/ohj components ---
+            # Zero h2 rows and output columns for the indexing subspace
+            layer2.W.data[H2_OHI_START:N_IDEAL_H2, :] = 0.0
+
+            for i in range(N_OHI):
+                c_idx = ohi_index(i)
+                layer2.W.data[:, c_idx] = 0.0
+                h2_pos = H2_OHI_START + 2 * i
+                h2_neg = h2_pos + 1
+                layer2.W.data[h2_pos, c_idx] = 1.0
+                layer2.W.data[h2_neg, c_idx] = -1.0
+                layer2.b.data[c_idx] = 0.0
+
+            for j in range(N_OHJ):
+                c_idx = ohj_index(j)
+                layer2.W.data[:, c_idx] = 0.0
+                h2_pos = H2_OHJ_START + 2 * j
+                h2_neg = h2_pos + 1
+                layer2.W.data[h2_pos, c_idx] = 1.0
+                layer2.W.data[h2_neg, c_idx] = -1.0
+                layer2.b.data[c_idx] = 0.0
+
+
 def initialize_ci_fns_from_ground_truth(
     component_model: ComponentModel,
     target_model: PingPongModel,
@@ -398,6 +504,9 @@ def main(
     if task_config.init_computational_ci == "ideal":
         initialize_ci_fns_from_ground_truth(component_model, target_model)
         logger.info("Initialized CI functions with AND logic for per-circuit detection")
+    elif task_config.init_indexing_ci == "ideal":
+        initialize_indexing_ci_fns_only(component_model, target_model)
+        logger.info("Initialized indexing CI functions only (ohi/ohj pass-through)")
 
     component_model.to(device)
 
