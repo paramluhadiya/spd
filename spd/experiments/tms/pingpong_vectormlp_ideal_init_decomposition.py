@@ -116,12 +116,19 @@ def initialize_routing_ci_fns(
 ) -> None:
     """Initialize CI functions for the 8 routing masking components per layer.
 
-    For each routing masking component k, sets component k's private weights to detect
-    only x[input_k] via the GELU finite-difference Heaviside trick:
+    With 2 hidden layers (ci_fn_hidden_dims: [h1, h2]) and ReLU activations:
 
-        CI_k(x) = GELU(S * x[input_k] - t) - GELU(S * x[input_k] - (t+1)) ≈ H(x[input_k])
+    Layer 0: ReLU finite-difference Heaviside on x[input_k] using hidden units 0 and 1.
+        h1[k, 0] = ReLU(S * x[input_k] - t)      ≈ S*x - t for x > t/S, else 0
+        h1[k, 1] = ReLU(S * x[input_k] - t - 1)
+        diff = h1[0] - h1[1] = exactly 0 when x=0, exactly 1 when x=1 (binary inputs).
 
-    Only uses hidden units 0 and 1 of component k's private ParallelLinear weights.
+    Layer 1: re-applies the same finite-difference on the diff ∈ {0, 1}.
+        ReLU(-t) = 0 exactly, so there is no bleed when routing=0. Same S and t work.
+
+    Output layer: diff of layer-1 units 0 and 1 ≈ H(x[input_k]).
+
+    Only uses hidden units 0 and 1 in each layer. All other weights for component k are zeroed.
     The other (non-routing) indexing and computational components are untouched.
     """
     S = 50.0
@@ -132,14 +139,20 @@ def initialize_routing_ci_fns(
         assert isinstance(ci_fn, VectorMLPCiFn), (
             f"Expected VectorMLPCiFn, got {type(ci_fn)}. Set ci_fn_type='vector_mlp' in config."
         )
+        assert len(ci_fn.layers) == 5, (
+            f"Expected 2 hidden layers (5 sublayers), got {len(ci_fn.layers)}. "
+            "Set ci_fn_hidden_dims to a list of 2 values."
+        )
 
-        layer0 = ci_fn.layers[0]  # ParallelLinear(C, input_dim, hidden_dim)
-        layer1 = ci_fn.layers[2]  # ParallelLinear(C, hidden_dim, 1); layers[1] is GELU
+        layer0 = ci_fn.layers[0]       # ParallelLinear(C, input_dim, h1)
+        layer1 = ci_fn.layers[2]       # ParallelLinear(C, h1, h2); layers[1] is GELU
+        output_layer = ci_fn.layers[4] # ParallelLinear(C, h2, 1); layers[3] is GELU
         assert isinstance(layer0, ParallelLinear)
         assert isinstance(layer1, ParallelLinear)
+        assert isinstance(output_layer, ParallelLinear)
 
-        hidden_dim = layer0.W.shape[2]
-        assert hidden_dim >= 2, f"Need at least 2 hidden dims for Heaviside trick, got {hidden_dim}"
+        assert layer0.W.shape[2] >= 2, f"h1={layer0.W.shape[2]} < 2"
+        assert layer1.W.shape[2] >= 2, f"h2={layer1.W.shape[2]} < 2"
         assert layer0.W.shape[1] == target_model.input_dim
 
         routing = LAYER_ROUTING[module_name]
@@ -149,20 +162,28 @@ def initialize_routing_ci_fns(
             for k in mask_range:
                 input_k = _input_dim_for_component(k)
 
-                # Zero component k's first layer (isolate from random init)
+                # Layer 0: Heaviside of x[input_k] in hidden units 0 and 1
                 layer0.W.data[k, :, :] = 0.0
-
-                # Heaviside via GELU finite diff: hidden units 0 and 1
                 layer0.W.data[k, input_k, 0] = S
                 layer0.W.data[k, input_k, 1] = S
                 layer0.b.data[k, 0] = -t
                 layer0.b.data[k, 1] = -(t + 1)
 
-                # Output: GELU(S*x - t) - GELU(S*x - (t+1)) ≈ H(x[input_k])
-                layer1.W.data[k, :, 0] = 0.0
-                layer1.W.data[k, 0, 0] = 1.0
-                layer1.W.data[k, 1, 0] = -1.0
-                layer1.b.data[k, 0] = 0.0
+                # Layer 1: same finite-diff on (h1[0] - h1[1]) ∈ {0, 1}
+                # ReLU(-t) = 0 exactly, so same S and t work with no bleed.
+                layer1.W.data[k, :, :] = 0.0
+                layer1.W.data[k, 0, 0] = S
+                layer1.W.data[k, 1, 0] = -S
+                layer1.W.data[k, 0, 1] = S
+                layer1.W.data[k, 1, 1] = -S
+                layer1.b.data[k, 0] = -t
+                layer1.b.data[k, 1] = -(t + 1)
+
+                # Output: GELU(h2[0]) - GELU(h2[1]) ≈ H(x[input_k])
+                output_layer.W.data[k, :, 0] = 0.0
+                output_layer.W.data[k, 0, 0] = 1.0
+                output_layer.W.data[k, 1, 0] = -1.0
+                output_layer.b.data[k, 0] = 0.0
 
 
 def main(

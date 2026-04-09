@@ -21,7 +21,7 @@ wandb_run_name_prefix: ""
 seed: 0
 n_mask_samples: 1
 ci_fn_type: "vector_mlp"
-ci_fn_hidden_dims: [16]
+ci_fn_hidden_dims: [16, 16]
 sigmoid_type: "leaky_hard"
 
 # Module decomposition: 3 layers, each (80 x 80)
