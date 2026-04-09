@@ -1,31 +1,20 @@
-# PingPong 64-8 with vector_mlp CI and ideal initialization for routing masking components only.
-# C=600 per layer (80 true + 520 extra). Computational components start random.
-#
-# Per layer, 8 routing masking components are ideally initialized:
-#   model.0 / model.4: ohj group (8 components)
-#   model.2:           ohi group (8 components)
-#   - V/U: rank-1 decomposition (V = e_{D+k}, U = W^T[D+k, :])
-#   - CI:  Heaviside(x_{D+k}) via GELU finite-difference on component k's private weights
-# The other 8 indexing components per layer (bias group) and all 64 computational
-# components start fully random and are learned by SPD.
-#
-# vector_mlp advantage over shared_mlp: each component k has its own ParallelLinear
-# weights. Masking CIs set W[k, input_k, 0:2] only; all other components are fully independent.
-
+# PingPong 64-8 (D=64, d=8, T=64 circuits, 3 layers)
 # --- WandB ---
 wandb_project: spd
-wandb_run_name: pingpong-vectormlp-ideal-masking-init-beta-inf
+wandb_run_name: longrun-ideal-init-config
 wandb_run_name_prefix: ""
 
 # --- General ---
 seed: 0
 n_mask_samples: 1
-ci_fn_type: "vector_mlp"
-ci_fn_hidden_dims: [64, 64]
+ci_fn_type: "shared_mlp"
+ci_fn_hidden_dims: [2048, 2048]
 sigmoid_type: "leaky_hard"
 
-# Module decomposition: 3 layers, each (80 x 80)
-# C=600: 80 initialized (16 ideal masking + 64 random computational), 520 scaled down
+# Module decomposition: decompose the layer weight matrices
+# Each layer is (input_dim x input_dim) where input_dim = D + 2*num_blocks = 80
+# The c->c block (D x D) contains the actual circuit weights
+# PingPong uses nn.Sequential, so layers are model.0, model.2, model.4 (Linear layers)
 module_info:
   - module_pattern: "model.0"
     C: 600
@@ -38,31 +27,40 @@ use_delta_component: true
 loss_metric_configs:
   - classname: "FaithfulnessLoss"
     coeff: 5.0
-  - classname: "BetaInfImportanceMinimalityLoss"
-    coeff: 1e-4
+  - classname: "ImportanceMinimalityLoss"
+    coeff: 5e-5  # NOTE: when beta=0, 2e-4 worked pretty well for 4096 batch size. 
     pnorm: 2.0
     p_anneal_start_frac: 0.0
     p_anneal_end_frac: 1
     p_anneal_final_p: 0.4
-    # beta: 0.32
+    beta: 0.16 #TODO change this. We want to have nonzero beta. Might try this with beta = +inf by changing the minimality loss to only keep beta term. 
+  # - classname: "StochasticReconLoss"
+  #   coeff: 1.0
+  # Removing stochastic recon loss made the decomposition more sensible. 
+  # - classname: "PGDReconLayerwiseLoss"
+  #   coeff: 10
+  #   init: "ones"
+  #   step_size: 0.5
+  #   n_steps: 4
+  #   mask_scope: "shared_across_batch"
   - classname: "PGDReconSubsetLoss"
     coeff: 25
     init: "ones"
-    step_size: 0.5
-    n_steps: 4
+    step_size: 0.25
+    n_steps: 8
     mask_scope: "shared_across_batch"
   - classname: "PGDReconLoss"
     coeff: 25
     init: "ones"
-    step_size: 0.5
-    n_steps: 4
+    step_size: 0.25
+    n_steps: 8
     mask_scope: "shared_across_batch"
 output_loss_type: mse
 
 # --- Training ---
 batch_size: 4096
 eval_batch_size: 4096
-steps: 200000
+steps: 1000000
 lr_schedule:
   start_val: 1e-4
   final_val_frac: 0.1
@@ -70,7 +68,7 @@ lr_schedule:
   warmup_pct: 0.0
 
 # --- Faithfulness Warmup ---
-faithfulness_warmup_steps: 0
+faithfulness_warmup_steps: 200
 faithfulness_warmup_lr: 0.01
 faithfulness_warmup_weight_decay: 0.1
 
@@ -78,7 +76,7 @@ faithfulness_warmup_weight_decay: 0.1
 train_log_freq: 100
 eval_freq: 1000
 n_eval_steps: 100
-slow_eval_freq: 1000
+slow_eval_freq: 2000
 save_freq: 10000
 ci_alive_threshold: 0.1
 n_examples_until_dead: 4_096_000
@@ -99,7 +97,7 @@ eval_metric_configs:
   - classname: "MaskingPatternEval"
     D: 64
     d: 8
-    cos_sim_threshold: 0.85
+    cos_sim_threshold: 0.75
     ci_threshold: 0.1
 
 # --- Pretrained model info ---
@@ -109,7 +107,3 @@ pretrained_model_path: "/home/pluhadiya/spd_out/train/t-a4d0f086/pingpong.pth"
 # --- Task Specific ---
 task_config:
   task_name: pingpong
-  init_computational_components: random
-  init_indexing_components: ideal
-  init_computational_ci: random
-  init_indexing_ci: ideal
