@@ -21,7 +21,7 @@ wandb_run_name_prefix: ""
 seed: 0
 n_mask_samples: 1
 ci_fn_type: "vector_mlp"
-ci_fn_hidden_dims: [16, 16]
+ci_fn_hidden_dims: [64, 64]
 sigmoid_type: "leaky_hard"
 
 # Module decomposition: 3 layers, each (80 x 80)
@@ -39,12 +39,12 @@ loss_metric_configs:
   - classname: "FaithfulnessLoss"
     coeff: 5.0
   - classname: "ImportanceMinimalityLoss"
-    coeff: 5e-5
+    coeff: 1e-4
     pnorm: 2.0
     p_anneal_start_frac: 0.0
     p_anneal_end_frac: 1
     p_anneal_final_p: 0.4
-    beta: 0.16
+    beta: 0.32
   - classname: "PGDReconSubsetLoss"
     coeff: 25
     init: "ones"
@@ -62,9 +62,9 @@ output_loss_type: mse
 # --- Training ---
 batch_size: 4096
 eval_batch_size: 4096
-steps: 100000
+steps: 200000
 lr_schedule:
-  start_val: 3e-4
+  start_val: 1e-4
   final_val_frac: 0.1
   fn_type: cosine
   warmup_pct: 0.0
@@ -99,7 +99,7 @@ eval_metric_configs:
   - classname: "MaskingPatternEval"
     D: 64
     d: 8
-    cos_sim_threshold: 0.75
+    cos_sim_threshold: 0.85
     ci_threshold: 0.1
 
 # --- Pretrained model info ---
