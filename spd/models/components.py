@@ -79,7 +79,7 @@ class VectorMLPCiFn(nn.Module):
             input_dim = input_dim if i == 0 else hidden_dims[i - 1]
             output_dim = hidden_dims[i]
             self.layers.append(ParallelLinear(C, input_dim, output_dim, nonlinearity="relu"))
-            self.layers.append(nn.GELU())
+            self.layers.append(nn.ReLU())
 
         self.layers.append(ParallelLinear(C, hidden_dims[-1], 1, nonlinearity="linear"))
 
