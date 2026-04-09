@@ -1,22 +1,31 @@
-# PingPong 64-8 with per-circuit ideal initialization
-# C=600 per layer (528 true + 72 extra). Beta enabled.
-# 512 computational components (one per src×route×neuron), 16 indexing.
-# CI uses AND logic: AND(neuron_k, routing_onehot) via 2-hidden-layer MLP.
+# PingPong 64-8 with vector_mlp CI and ideal initialization for routing masking components only.
+# C=600 per layer (80 true + 520 extra). Computational components start random.
+#
+# Per layer, 8 routing masking components are ideally initialized:
+#   model.0 / model.4: ohj group (8 components)
+#   model.2:           ohi group (8 components)
+#   - V/U: rank-1 decomposition (V = e_{D+k}, U = W^T[D+k, :])
+#   - CI:  Heaviside(x_{D+k}) via GELU finite-difference on component k's private weights
+# The other 8 indexing components per layer (bias group) and all 64 computational
+# components start fully random and are learned by SPD.
+#
+# vector_mlp advantage over shared_mlp: each component k has its own ParallelLinear
+# weights. Masking CIs set W[k, input_k, 0:2] only; all other components are fully independent.
 
 # --- WandB ---
 wandb_project: spd
-wandb_run_name: pingpong-percircuit-ideal-indexing
+wandb_run_name: pingpong-vectormlp-ideal-masking-init
 wandb_run_name_prefix: ""
 
 # --- General ---
 seed: 0
 n_mask_samples: 1
-ci_fn_type: "shared_mlp"
-ci_fn_hidden_dims: [2048, 2048]
+ci_fn_type: "vector_mlp"
+ci_fn_hidden_dims: [16]
 sigmoid_type: "leaky_hard"
 
 # Module decomposition: 3 layers, each (80 x 80)
-# C=600: 528 initialized to true per-circuit decomposition, 72 random/off
+# C=600: 80 initialized (16 ideal masking + 64 random computational), 520 scaled down
 module_info:
   - module_pattern: "model.0"
     C: 600
