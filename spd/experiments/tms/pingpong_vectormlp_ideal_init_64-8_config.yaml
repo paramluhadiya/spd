@@ -16,6 +16,7 @@
 wandb_project: spd
 wandb_run_name: pingpong-vectormlp-ideal-masking-init-beta-inf
 wandb_run_name_prefix: ""
+save_checkpoints_to_wandb: true
 
 # --- General ---
 seed: 0
@@ -38,13 +39,13 @@ use_delta_component: true
 loss_metric_configs:
   - classname: "FaithfulnessLoss"
     coeff: 5.0
-  - classname: "BetaInfImportanceMinimalityLoss"
-    coeff: 1e-4
+  - classname: "ImportanceMinimalityLoss"
+    coeff: 2e-4
     pnorm: 2.0
     p_anneal_start_frac: 0.0
     p_anneal_end_frac: 1
     p_anneal_final_p: 0.4
-    # beta: 0.32
+    beta: 0.16
   - classname: "PGDReconSubsetLoss"
     coeff: 25
     init: "ones"
@@ -79,7 +80,7 @@ train_log_freq: 100
 eval_freq: 1000
 n_eval_steps: 100
 slow_eval_freq: 1000
-save_freq: 10000
+save_freq: 50000
 ci_alive_threshold: 0.1
 n_examples_until_dead: 4_096_000
 eval_metric_configs:
