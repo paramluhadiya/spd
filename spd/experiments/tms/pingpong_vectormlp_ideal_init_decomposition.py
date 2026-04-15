@@ -39,11 +39,11 @@ from spd.utils.module_utils import expand_module_patterns
 from spd.utils.run_utils import setup_decomposition_run
 from spd.utils.wandb_utils import init_wandb
 
-N_COMPUTATIONAL = 64
+N_COMPUTATIONAL = 512  # 8 src × 8 route × 8 neurons
 N_OHI = 8
 N_OHJ = 8
 N_INDEXING = N_OHI + N_OHJ  # 16
-N_TRUE_COMPONENTS = N_COMPUTATIONAL + N_INDEXING  # 80
+N_TRUE_COMPONENTS = N_COMPUTATIONAL + N_INDEXING  # 528
 
 D = 64       # Network width
 NUM_BLOCKS = 8
@@ -99,15 +99,6 @@ def initialize_routing_components_from_ground_truth(
                 components.V.data[:, k] = eye[k]
                 components.U.data[k, :] = W.T[k, :]
 
-
-def scale_down_unused_components(component_model: ComponentModel) -> None:
-    """Scale down components beyond the 80 true components so they start small."""
-    for module_name in component_model.target_module_paths:
-        components = component_model.components[module_name]
-        assert isinstance(components, LinearComponents)
-        with torch.no_grad():
-            components.V.data[:, N_TRUE_COMPONENTS:] *= 0.01
-            components.U.data[N_TRUE_COMPONENTS:, :] *= 0.01
 
 
 def initialize_routing_ci_fns(
@@ -265,8 +256,6 @@ def main(
         "Initialized routing masking components (V, U) per layer: "
         f"ohj for model.0/model.4, ohi for model.2"
     )
-
-    scale_down_unused_components(component_model)
 
     initialize_routing_ci_fns(component_model, target_model)
     logger.info("Initialized routing masking CI functions to Heaviside (8 per layer)")
