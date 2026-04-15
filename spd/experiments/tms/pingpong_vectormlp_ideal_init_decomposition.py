@@ -11,7 +11,7 @@ For each ideally-initialized masking component k:
   - V/U: rank-1 decomposition (V = e_{D+k}, U = W^T[D+k, :])
   - CI:  Heaviside(x_{D+k}) via GELU finite-difference on component k's private weights
 
-The 64 computational components and the 8 non-routing indexing components per layer start
+The 512 computational components and the 8 non-routing indexing components per layer start
 fully random (V, U, and CI) and are learned by SPD.
 
 vector_mlp advantage: each component k has its own ParallelLinear weights, so masking CIs
@@ -96,8 +96,9 @@ def initialize_routing_components_from_ground_truth(
         with torch.no_grad():
             eye = torch.eye(d_in, device=components.V.device)
             for k in mask_range:
-                components.V.data[:, k] = eye[k]
-                components.U.data[k, :] = W.T[k, :]
+                input_dim = _input_dim_for_component(k)
+                components.V.data[:, k] = eye[input_dim]
+                components.U.data[k, :] = W.T[input_dim, :]
 
 
 
