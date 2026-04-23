@@ -106,6 +106,15 @@ class PingPongTaskConfig(BaseConfig):
     init_indexing_components: Literal["ideal", "random"] = "random"
     init_computational_ci: Literal["ideal", "random"] = "random"
     init_indexing_ci: Literal["ideal", "random"] = "random"
+    random_init_scale: float = Field(
+        default=1.0,
+        description=(
+            "Multiplier applied to V and U for all randomly-initialized components. "
+            "Applied before any ideal initialization, so ideally-initialized components "
+            "(masks, etc.) keep their full magnitude. Use < 1.0 to encourage symmetry "
+            "breaking by letting random components grow into orthogonal directions."
+        ),
+    )
 
     @model_validator(mode="after")
     def _random_components_require_random_ci(self) -> "PingPongTaskConfig":

@@ -13,15 +13,13 @@ import torch
 from spd.configs import Config
 from spd.experiments.tms.bss_models import PingPongModel, PingPongTargetRunInfo
 from spd.experiments.tms.pingpong_vectormlp_ideal_init_decomposition import (
-    D,
     LAYER_ROUTING,
     N_COMPUTATIONAL,
     N_OHI,
-    N_TRUE_COMPONENTS,
     NUM_BLOCKS,
+    D,
     _routing_component_range,
     initialize_routing_ci_fns,
-    scale_down_unused_components,
 )
 from spd.models.component_model import ComponentModel
 from spd.utils.module_utils import expand_module_patterns
@@ -50,7 +48,6 @@ def _build_initialized_model() -> tuple[ComponentModel, PingPongModel]:
         sigmoid_type=config.sigmoid_type,
     )
 
-    scale_down_unused_components(component_model)
     initialize_routing_ci_fns(component_model, target_model)
 
     return component_model, target_model

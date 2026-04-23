@@ -63,6 +63,22 @@ def _routing_component_range(routing: str) -> range:
     return range(N_COMPUTATIONAL + N_OHI, N_TRUE_COMPONENTS)
 
 
+def scale_random_components(component_model: ComponentModel, scale: float) -> None:
+    """Multiply V and U by `scale` for every component.
+
+    Run this BEFORE any ideal initialization so that ideally-initialized components
+    keep their full scale. Smaller scales encourage symmetry breaking by letting
+    random components grow into orthogonal directions instead of competing as
+    similarly-large noise contributors at init.
+    """
+    for module_name in component_model.target_module_paths:
+        components = component_model.components[module_name]
+        assert isinstance(components, LinearComponents)
+        with torch.no_grad():
+            components.V.data *= scale
+            components.U.data *= scale
+
+
 def _input_dim_for_component(k: int) -> int:
     """Input dimension in x corresponding to indexing component k."""
     if k < N_COMPUTATIONAL + N_OHI:
@@ -252,10 +268,14 @@ def main(
         sigmoid_type=config.sigmoid_type,
     )
 
+    if task_config.random_init_scale != 1.0:
+        scale_random_components(component_model, task_config.random_init_scale)
+        logger.info(f"Scaled all V/U at init by {task_config.random_init_scale}")
+
     initialize_routing_components_from_ground_truth(component_model, target_model)
     logger.info(
         "Initialized routing masking components (V, U) per layer: "
-        f"ohj for model.0/model.4, ohi for model.2"
+        "ohj for model.0/model.4, ohi for model.2"
     )
 
     initialize_routing_ci_fns(component_model, target_model)
