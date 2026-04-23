@@ -14,7 +14,7 @@
 
 # --- WandB ---
 wandb_project: spd
-wandb_run_name: pingpong-vectormlp-ideal-masking-init-beta-inf
+wandb_run_name: pingpong-vectormlp-ideal-masking-init-0.01-scaling
 wandb_run_name_prefix: ""
 save_checkpoints_to_wandb: true
 
@@ -110,6 +110,7 @@ pretrained_model_path: "/home/pluhadiya/spd_out/train/t-a4d0f086/pingpong.pth"
 # --- Task Specific ---
 task_config:
   task_name: pingpong
+  random_init_scale: 0.01
   init_computational_components: random
   init_indexing_components: ideal
   init_computational_ci: random
