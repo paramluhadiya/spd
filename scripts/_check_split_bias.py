@@ -4,16 +4,19 @@ Hypothesis: H1 components with V pointing at a routing one-hot (D+i_v) are the
 target model's bias contribution for source-i_v, but split per (i_v, j*) circuit by
 the beta=inf importance-minimality pressure.
 
-For circuit (i_v, j*) the prediction is:
-  U[c, :]  ≈  zero everywhere EXCEPT the j*-block, which equals
-  W[j*·d:(j*+1)·d, D+i_v] — the j*-block slice of source-i_v's bias column.
+For circuit (i_v, j*) the prediction is that the component's contribution to the
+bias column W[:, V_argmax] = V[V_argmax, c] · U[c, :] is concentrated in the
+j*-block.
 
 Per H1 component we report:
   - U mass concentration on block j*  (j*_frac)
-  - cos(U[c, :], full_bias_target)    where full_bias_target = W[:, V_argmax]
-  - cos(U[c, :], split_bias_target)   where split = zeros + W[j*-block, V_argmax]
+  - cos(V[V_argmax, c] · U[c, :], W[:, V_argmax])              FULL
+  - cos(V[V_argmax, c] · U[c, :][j*-block], W[j*-block, V_argmax])  SPLIT
 
-If H1=split-bias holds, j*_frac should be high AND cos_split > cos_full.
+The V-weighting is critical: cosine of raw U with W[:, V_argmax] flips sign when
+V[V_argmax, c] is negative — so without weighting an aligned component looks
+anti-aligned. (For a single component this reduces to sign(V[V_argmax, c]) · U
+since cosine is scale-invariant.)
 
 Aggregate stats are also reported across H1, H2, mixed, and circuit-specific overall.
 
@@ -162,12 +165,20 @@ def main() -> None:
         j_star_frac = block_frac[j_val].item()
 
         # Bias targets — based on V_argmax (whichever input dim V points at)
-        full_bias_tgt = W[:, v_argmax]  # (80,)
-        split_bias_tgt = torch.zeros(80)
-        split_bias_tgt[j_val * d : (j_val + 1) * d] = W[j_val * d : (j_val + 1) * d, v_argmax]
+        # Component c's contribution to W[:, v_argmax] is V[v_argmax, c] · U[c, :].
+        # Cosine is scale-invariant in magnitude, so this is sign(V[v_argmax, c]) · U.
+        v_proj = float(v[v_argmax].item())
+        v_sign = float(np.sign(v_proj)) if v_proj != 0 else 1.0
+        u_signed = v_sign * u_full
 
-        cos_full = cos(u_full, full_bias_tgt)
-        cos_split = cos(u_full, split_bias_tgt)
+        full_bias_tgt = W[:, v_argmax]  # (80,)
+        cos_full = cos(u_signed, full_bias_tgt)
+
+        # Split bias: only j*-block of the bias column. Compare the j*-block slice
+        # of the signed U against the j*-block of W[:, v_argmax].
+        u_signed_j = u_signed[j_val * d : (j_val + 1) * d]
+        bias_j = W[j_val * d : (j_val + 1) * d, v_argmax]
+        cos_split = cos(u_signed_j, bias_j)
 
         # Categorize V_argmax location
         if v_argmax < D:
@@ -186,6 +197,8 @@ def main() -> None:
                 v_argmax=v_argmax,
                 v_loc=v_loc,
                 v_1hot=v_1hot,
+                v_proj=v_proj,
+                v_sign=v_sign,
                 u_best_block=u_best_block,
                 u_best_frac=u_best_frac,
                 j_star_frac=j_star_frac,
@@ -201,14 +214,14 @@ def main() -> None:
     print(f"{'='*120}")
     print(
         f"\n{'c':>4s}  {'circ':>7s}  {'V_argmax':>8s}  {'V_loc':>16s}  {'V_1hot':>7s}  "
-        f"{'U_best':>7s}  {'U_best_frac':>11s}  {'j*_frac':>8s}  "
+        f"{'V_proj':>8s}  {'U_best':>7s}  {'U_best_frac':>11s}  {'j*_frac':>8s}  "
         f"{'cos_full':>9s}  {'cos_split':>10s}"
     )
     for r in h1_rows:
         match = "*" if r["u_best_block"] == r["j"] else " "
         print(
             f"{r['c']:>4d}  ({r['i']},{r['j']})  {r['v_argmax']:>8d}  {r['v_loc']:>16s}  "
-            f"{r['v_1hot']:>7.4f}  {r['u_best_block']:>6d}{match}  "
+            f"{r['v_1hot']:>7.4f}  {r['v_proj']:>+8.3f}  {r['u_best_block']:>6d}{match}  "
             f"{r['u_best_frac']:>11.4f}  {r['j_star_frac']:>8.4f}  "
             f"{r['cos_full']:>9.4f}  {r['cos_split']:>10.4f}"
         )
@@ -266,7 +279,9 @@ def main() -> None:
 
         for k, r in enumerate(h1_ohi):
             i_val, j_val, c, v_argmax = r["i"], r["j"], r["c"], r["v_argmax"]
-            u_full = U[c, :].numpy()
+            v_sign = r["v_sign"]
+            # Plot V-signed U so visual sign matches the bias contribution direction
+            u_full = (v_sign * U[c, :]).numpy()
             split_target = np.zeros(80)
             split_target[j_val * d : (j_val + 1) * d] = W[
                 j_val * d : (j_val + 1) * d, v_argmax
