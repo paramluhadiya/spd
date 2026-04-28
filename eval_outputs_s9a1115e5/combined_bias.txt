@@ -1,0 +1,80 @@
+Downloading run from wandb: paramluhadiya/spd/s-9a1115e5
+wandb: Currently logged in as: luhadiyaparam (paramluhadiya) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+Loading wandb:paramluhadiya/spd/s-9a1115e5 ...
+V (80, 600)  U (600, 80)  W (80, 80)
+Computing baseline (i, j) CI grid ...
+
+Finding i-specific, j-noncommital components per i ...
+
+  i-specific, j-noncommital components per i:
+    i=0: N=1  ['c=413(comp[0,1],1hot=0.45)']
+    i=1: N=4  ['c=11(ohi[1],1hot=0.49)', 'c=161(ohi[1],1hot=0.70)', 'c=209(comp[1,6],1hot=0.28)', 'c=288(ohi[1],1hot=0.61)']
+    i=2: N=2  ['c=369(ohi[2],1hot=0.64)', 'c=595(ohi[2],1hot=0.31)']
+    i=3: N=5  ['c=6(ohi[3],1hot=0.58)', 'c=168(ohi[3],1hot=0.85)', 'c=513(comp[3,0],1hot=0.43)', 'c=542(ohi[3],1hot=0.82)', 'c=546(ohi[3],1hot=0.54)']
+    i=4: N=4  ['c=41(ohi[4],1hot=0.86)', 'c=443(ohi[4],1hot=0.80)', 'c=460(ohi[4],1hot=0.40)', 'c=578(ohi[4],1hot=0.51)']
+    i=5: N=4  ['c=261(ohi[5],1hot=0.46)', 'c=295(ohi[5],1hot=0.55)', 'c=583(ohi[5],1hot=0.53)', 'c=592(ohi[5],1hot=0.74)']
+    i=6: N=8  ['c=51(ohi[6],1hot=0.55)', 'c=73(comp[6,0],1hot=0.38)', 'c=113(ohi[6],1hot=0.62)', 'c=187(ohi[6],1hot=0.61)', 'c=247(comp[6,0],1hot=0.27)', 'c=328(ohi[6],1hot=0.32)', 'c=482(comp[6,0],1hot=0.35)', 'c=599(ohi[6],1hot=0.58)']
+    i=7: N=6  ['c=149(ohi[7],1hot=0.86)', 'c=342(comp[7,7],1hot=0.36)', 'c=397(comp[7,3],1hot=0.32)', 'c=447(ohi[7],1hot=0.60)', 'c=506(ohi[7],1hot=0.33)', 'c=518(ohi[7],1hot=0.33)']
+
+Found 52 circuit-specific components total
+Probing for H1-ohi (V→ohi[i*], routing-gated) ...
+Found 2 H1-ohi components: [(2, 0, 20), (5, 6, 560)]
+
+====================================================================================================
+COMBINED BIAS TEST
+====================================================================================================
+Target = W[:, D+i*]  (bias contribution from ohi[i*] = 1, full output vector)
+Hypothesis: U[H1] + Σ U[NC[i*]]  ≈  W[:, D+i*]
+
+
+--- c=20  (i*=2, j*=0)  NC[i*]=[369, 595]
+  V projections on D+i*:    H1=-0.425   NC=['+0.568', '-0.474']
+  ||W[:,D+i*]||=8.641   ||VW combined||=2.309   (ratio = 0.267)
+  cos vs W[:, D+i*]   FULL VECTOR:
+      mode     H1 only   Σ NC only     H1 + Σ NC
+       raw     -0.3160     -0.1311       -0.3079
+      sign     +0.3160     +0.6843       +0.7324
+        vw     +0.3160     +0.6791       +0.7275  <==
+  cos vs W[j*-blk, D+i*]   BLOCK-j*:
+      mode     H1 only   Σ NC only     H1 + Σ NC
+       raw     -0.5225     +0.7394       -0.0841
+      sign     +0.5225     +0.5739       +0.8551
+        vw     +0.5225     +0.5913       +0.8565  <==
+
+--- c=560  (i*=5, j*=6)  NC[i*]=[261, 295, 583, 592]
+  V projections on D+i*:    H1=-0.311   NC=['-0.491', '-0.630', '-0.671', '-0.539']
+  ||W[:,D+i*]||=6.866   ||VW combined||=3.298   (ratio = 0.480)
+  cos vs W[:, D+i*]   FULL VECTOR:
+      mode     H1 only   Σ NC only     H1 + Σ NC
+       raw     -0.4091     -0.8141       -0.8662
+      sign     +0.4091     +0.8141       +0.8662
+        vw     +0.4091     +0.8104       +0.8497  <==
+  cos vs W[j*-blk, D+i*]   BLOCK-j*:
+      mode     H1 only   Σ NC only     H1 + Σ NC
+       raw     -0.7244     -0.8741       -0.9657
+      sign     +0.7244     +0.8741       +0.9657
+        vw     +0.7244     +0.8761       +0.9726  <==
+
+====================================================================================================
+AGGREGATE (N=2)
+====================================================================================================
+
+  cos(reconstruction, W[:, D+i*])  FULL VECTOR
+      mode     H1 mean     NC mean    H1+NC mean     H1+NC med     H1+NC max
+       raw     -0.3626     -0.4726       -0.5870       -0.5870       -0.3079
+      sign     +0.3626     +0.7492       +0.7993       +0.7993       +0.8662
+        vw     +0.3626     +0.7448       +0.7886       +0.7886       +0.8497
+
+  cos(reconstruction, W[j*-blk, D+i*])  BLOCK-j*
+      mode     H1 mean     NC mean    H1+NC mean     H1+NC med     H1+NC max
+       raw     -0.6234     -0.0674       -0.5249       -0.5249       -0.0841
+      sign     +0.6234     +0.7240       +0.9104       +0.9104       +0.9657
+        vw     +0.6234     +0.7337       +0.9146       +0.9146       +0.9726
+
+  [ raw]  #(combined FULL  > max(H1, NC)):  0/2     #(combined BLK-j* > max(H1, NC)): 0/2
+
+  [sign]  #(combined FULL  > max(H1, NC)):  2/2     #(combined BLK-j* > max(H1, NC)): 2/2
+
+  [  vw]  #(combined FULL  > max(H1, NC)):  2/2     #(combined BLK-j* > max(H1, NC)): 2/2
+
+Saved combined_bias.png

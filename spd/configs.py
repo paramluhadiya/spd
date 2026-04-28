@@ -115,6 +115,14 @@ class PingPongTaskConfig(BaseConfig):
             "breaking by letting random components grow into orthogonal directions."
         ),
     )
+    warm_start_path: str | None = Field(
+        default=None,
+        description=(
+            "Path to a previous SPD run to warm-start from (e.g. "
+            "'wandb:entity/project/runs/<run_id>'). Only consumed by the warm-start "
+            "decomposition script; ignored by from-scratch decomposition scripts."
+        ),
+    )
 
     @model_validator(mode="after")
     def _random_components_require_random_ci(self) -> "PingPongTaskConfig":
