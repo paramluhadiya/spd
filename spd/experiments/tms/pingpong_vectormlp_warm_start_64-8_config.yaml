@@ -1,0 +1,132 @@
+# PingPong 64-8 vector_mlp WARM-START decomposition.
+#
+# Continues from a converged β=0 SPD checkpoint (no log-sparsity pressure) and
+# turns on BetaInfImportanceMinimalityLoss. Hypothesis: starting from a model
+# with flat (non-circuit-specific) components, the β=∞ pressure should drive
+# circuit specificity to emerge during continued training.
+#
+# Run with:
+#   spd-run --experiments pingpong_vectormlp_warm_start_64-8
+# or directly:
+#   python -m spd.experiments.tms.pingpong_vectormlp_warm_start_decomposition \
+#       --config_path spd/experiments/tms/pingpong_vectormlp_warm_start_64-8_config.yaml
+#
+# IMPORTANT: every structural setting below (module_info, ci_fn_*, sigmoid_type,
+# pretrained_model_*) must match the warm-start checkpoint, otherwise the
+# state_dict load will fail. Only the *training-time* settings (lr_schedule,
+# loss coeffs, steps) should differ from the β=0 config.
+
+# --- WandB ---
+wandb_project: spd
+wandb_run_name: pingpong-vectormlp-warm-start-from-beta0-to-beta-inf
+wandb_run_name_prefix: ""
+save_checkpoints_to_wandb: true
+
+# --- General ---
+seed: 0
+n_mask_samples: 1
+ci_fn_type: "vector_mlp"
+ci_fn_hidden_dims: [64, 64]
+sigmoid_type: "leaky_hard"
+
+# Module decomposition: 3 layers, each (80 x 80), C=600.
+# MUST match the warm-start checkpoint exactly.
+module_info:
+  - module_pattern: "model.0"
+    C: 600
+  - module_pattern: "model.2"
+    C: 600
+  - module_pattern: "model.4"
+    C: 600
+use_delta_component: true
+
+loss_metric_configs:
+  - classname: "FaithfulnessLoss"
+    coeff: 5.0
+  - classname: "BetaInfImportanceMinimalityLoss"
+    # Half the coeff of the original β=∞ run (2e-4) for the first ~10% of
+    # training; we get the actual ramp via a manual two-stage schedule (see
+    # discussion in the script docstring). With pnorm=2.0 and constant p we
+    # avoid the additional shock of p-annealing.
+    coeff: 1e-4
+    pnorm: 2.0
+    p_anneal_start_frac: 1.0
+    p_anneal_end_frac: 1.0
+    p_anneal_final_p: null
+  - classname: "PGDReconSubsetLoss"
+    coeff: 25
+    init: "ones"
+    step_size: 0.5
+    n_steps: 4
+    mask_scope: "shared_across_batch"
+  - classname: "PGDReconLoss"
+    coeff: 25
+    init: "ones"
+    step_size: 0.5
+    n_steps: 4
+    mask_scope: "shared_across_batch"
+output_loss_type: mse
+
+# --- Training ---
+batch_size: 4096
+eval_batch_size: 4096
+# Warm-start needs less wall-time than from-scratch. 60K steps is ~30% of the
+# original 200K; long enough for sparsity to bite, short enough not to drift
+# the trained scaffolding. Bump to 100K if specificity is borderline at end.
+steps: 60000
+lr_schedule:
+  # 3x lower than from-scratch (1e-4 -> 3e-5). The starting point is already a
+  # converged minimum of the β=0 objective, so we want gentle adaptation.
+  start_val: 3e-5
+  final_val_frac: 0.05
+  fn_type: cosine
+  warmup_pct: 0.05  # short warmup to ease the loss-class swap
+
+# --- Faithfulness Warmup ---
+# Skip — we are starting from a model that already has good faithfulness.
+faithfulness_warmup_steps: 0
+faithfulness_warmup_lr: 0.01
+faithfulness_warmup_weight_decay: 0.1
+
+# --- Logging & Saving ---
+train_log_freq: 100
+eval_freq: 1000
+n_eval_steps: 100
+slow_eval_freq: 1000
+save_freq: 10000  # more frequent than the original — we want to inspect early/mid trajectory
+ci_alive_threshold: 0.1
+n_examples_until_dead: 4_096_000
+eval_metric_configs:
+  - classname: "CIHistograms"
+    n_batches_accum: 5
+  - classname: "ComponentActivationDensity"
+  - classname: "CI_L0"
+    groups: null
+  - classname: "CIMeanPerComponent"
+  - classname: "PGDReconLoss"
+    init: "ones"
+    step_size: 0.1
+    n_steps: 20
+    mask_scope: "shared_across_batch"
+  - classname: "UnmaskedReconLoss"
+  - classname: StochasticHiddenActsReconLoss
+  - classname: "MaskingPatternEval"
+    D: 64
+    d: 8
+    cos_sim_threshold: 0.85
+    ci_threshold: 0.1
+
+# --- Pretrained model info ---
+# MUST match the warm-start checkpoint's pretrained_model_path.
+pretrained_model_class: "spd.experiments.tms.bss_models.PingPongModel"
+pretrained_model_path: "/home/pluhadiya/spd_out/train/t-a4d0f086/pingpong.pth"
+
+# --- Task Specific ---
+task_config:
+  task_name: pingpong
+  init_computational_components: random
+  init_indexing_components: ideal
+  init_computational_ci: random
+  init_indexing_ci: ideal
+  # Warm-start checkpoint: the converged β=0 control run.
+  warm_start_path: "wandb:paramluhadiya/spd/runs/s-9a1115e5"
