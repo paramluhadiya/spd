@@ -1,6 +1,9 @@
 spd/scripts/sweep_params.yaml
 docs/coverage/**
 notebooks/**
+notes/
+eval_outputs_*/
+/*.png
 
 **/out/
 neuronpedia_outputs/
