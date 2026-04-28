@@ -1,0 +1,44 @@
+Downloading run from wandb: paramluhadiya/spd/s-9a1115e5
+wandb: Currently logged in as: luhadiyaparam (paramluhadiya) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+Loading wandb:paramluhadiya/spd/s-9a1115e5 ...
+W shape: (80, 80)
+Computing baseline (i, j) grid ...
+
+Found 52 circuit-specific components
+Classifying H1/H2/mixed ...
+
+========================================================================================================================
+H1 COMPONENTS (N=9) — split-bias check
+========================================================================================================================
+
+   c     circ  V_argmax             V_loc   V_1hot    V_proj   U_best  U_best_frac   j*_frac   cos_full   cos_split
+ 302  (0,2)         2  comp blk 0 dim 2   0.2313    +0.407       2*       0.4859    0.4859     0.4038      0.9322
+  30  (1,0)        11  comp blk 1 dim 3   0.3024    -0.405       0*       0.7503    0.7503     0.3907      0.8411
+ 315  (1,2)        14  comp blk 1 dim 6   0.3175    -0.375       2*       0.8565    0.8565     0.2912      0.5470
+ 249  (1,5)        12  comp blk 1 dim 4   0.3311    -0.363       5*       0.9687    0.9687     0.2403      0.7229
+  20  (2,0)        66            ohi[2]   0.5589    -0.425       0*       0.8568    0.8568     0.3160      0.5225
+ 563  (2,3)        20  comp blk 2 dim 4   0.4408    -0.479       3*       0.9777    0.9777     0.3728      0.8694
+ 238  (5,2)        42  comp blk 5 dim 2   0.3623    +0.389       2*       0.6685    0.6685     0.3919      0.7415
+ 560  (5,6)        69            ohi[5]   0.6544    -0.311       6*       0.8576    0.8576     0.4091      0.7244
+ 341  (6,7)        54  comp blk 6 dim 6   0.2852    +0.248       7*       0.9226    0.9226     0.2970      0.7007
+
+  H1 with V → ohi (split-bias candidates): 2
+    #(U_best == j*):          2/2
+    j*_frac:    mean=0.857  median=0.857
+    cos_full:   mean=0.363  median=0.363
+    cos_split:  mean=0.623  median=0.623
+
+  H1 with V → other (computational): 7
+    #(U_best == j*):          7/7
+    j*_frac:    mean=0.804  median=0.857
+    cos_full:   mean=0.341  median=0.373
+    cos_split:  mean=0.765  median=0.741
+
+========================================================================================================================
+AGGREGATES BY CLASSIFICATION
+========================================================================================================================
+     H1  N=  9  #(U_best=j*)=9/9    j*_frac mean=0.816  cos_full mean=0.346  cos_split mean=0.734
+     H2  N=  9  #(U_best=j*)=9/9    j*_frac mean=0.764  cos_full mean=0.302  cos_split mean=0.640
+  mixed  N= 34  #(U_best=j*)=30/34   j*_frac mean=0.731  cos_full mean=0.273  cos_split mean=0.552
+
+Saved split_bias.png

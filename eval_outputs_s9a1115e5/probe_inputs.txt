@@ -1,0 +1,235 @@
+Downloading run from wandb: paramluhadiya/spd/s-9a1115e5
+wandb: Currently logged in as: luhadiyaparam (paramluhadiya) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: W&B API key is configured. Use `wandb login --relogin` to force relogin
+Loading wandb:paramluhadiya/spd/s-9a1115e5 ...
+Detected 8 mask components
+Computing baseline (i, j) CI grid ...
+Done.
+
+Found 53 circuit-specific components
+
+========================================================================================
+INPUT-FAMILY PROBE
+========================================================================================
+
+--- c=30  circuit=(1, 0)  V_argmax=11 (V_1hot=0.302)  [H1 (routing-gated)]
+  random_U[0,1]=0.975   zero=0.808   const_0.125=0.915   const_0.5=0.918   const_1.0=0.884
+  one-hot r=0..7: 1.000 0.864 0.890 0.917 0.912 1.000 0.901 0.823   pref_r=0  spread=0.177
+
+--- c=436  circuit=(1, 0)  V_argmax=10 (V_1hot=0.328)  [mixed]
+  random_U[0,1]=0.698   zero=1.000   const_0.125=1.000   const_0.5=0.000   const_1.0=0.413
+  one-hot r=0..7: 1.000 1.000 1.000 0.222 1.000 1.000 1.000 0.423   pref_r=0  spread=0.778
+
+--- c=20  circuit=(2, 0)  V_argmax=66 (V_1hot=0.559)  [H1 (routing-gated)]
+  random_U[0,1]=0.467   zero=1.000   const_0.125=1.000   const_0.5=0.000   const_1.0=1.000
+  one-hot r=0..7: 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000   pref_r=0  spread=0.000
+
+--- c=361  circuit=(2, 0)  V_argmax=16 (V_1hot=0.221)  [H2 (source-gated)]
+  random_U[0,1]=0.460   zero=0.000   const_0.125=0.000   const_0.5=0.081   const_1.0=0.231
+  one-hot r=0..7: 0.944 0.000 1.000 0.461 1.000 0.000 1.000 0.000   pref_r=2  spread=1.000
+
+--- c=440  circuit=(2, 0)  V_argmax=21 (V_1hot=0.180)  [H2 (source-gated)]
+  random_U[0,1]=0.883   zero=0.042   const_0.125=0.044   const_0.5=1.000   const_1.0=1.000
+  one-hot r=0..7: 0.653 0.562 0.342 0.529 1.000 0.929 0.869 0.907   pref_r=4  spread=0.658
+
+--- c=431  circuit=(3, 0)  V_argmax=30 (V_1hot=0.264)  [mixed]
+  random_U[0,1]=0.947   zero=0.996   const_0.125=1.000   const_0.5=0.840   const_1.0=1.000
+  one-hot r=0..7: 1.000 0.469 0.623 1.000 1.000 1.000 0.520 0.659   pref_r=0  spread=0.531
+
+--- c=559  circuit=(3, 0)  V_argmax=28 (V_1hot=0.371)  [mixed]
+  random_U[0,1]=0.979   zero=0.638   const_0.125=0.788   const_0.5=1.000   const_1.0=1.000
+  one-hot r=0..7: 0.148 0.391 1.000 1.000 0.788 0.606 1.000 0.740   pref_r=2  spread=0.852
+
+--- c=97  circuit=(4, 0)  V_argmax=68 (V_1hot=0.465)  [mixed]
+  random_U[0,1]=0.555   zero=1.000   const_0.125=1.000   const_0.5=0.410   const_1.0=0.586
+  one-hot r=0..7: 1.000 1.000 1.000 1.000 1.000 0.477 1.000 1.000   pref_r=0  spread=0.523
+
+--- c=364  circuit=(6, 0)  V_argmax=49 (V_1hot=0.345)  [mixed]
+  random_U[0,1]=0.418   zero=0.724   const_0.125=0.000   const_0.5=0.000   const_1.0=0.932
+  one-hot r=0..7: 0.000 1.000 1.000 0.000 1.000 1.000 0.886 0.000   pref_r=1  spread=1.000
+
+--- c=72  circuit=(7, 0)  V_argmax=58 (V_1hot=0.610)  [H2 (source-gated)]
+  random_U[0,1]=0.361   zero=0.000   const_0.125=0.000   const_0.5=0.000   const_1.0=1.000
+  one-hot r=0..7: 0.000 0.000 1.000 0.000 0.000 0.000 0.000 0.000   pref_r=2  spread=1.000
+
+--- c=154  circuit=(7, 0)  V_argmax=61 (V_1hot=0.265)  [mixed]
+  random_U[0,1]=0.871   zero=0.987   const_0.125=1.000   const_0.5=0.511   const_1.0=1.000
+  one-hot r=0..7: 1.000 0.294 0.076 0.957 1.000 1.000 0.577 0.289   pref_r=0  spread=0.924
+
+--- c=132  circuit=(1, 1)  V_argmax=8 (V_1hot=0.317)  [mixed]
+  random_U[0,1]=0.586   zero=0.935   const_0.125=1.000   const_0.5=0.000   const_1.0=1.000
+  one-hot r=0..7: 0.613 1.000 1.000 1.000 0.797 1.000 0.280 0.727   pref_r=1  spread=0.720
+
+--- c=308  circuit=(4, 1)  V_argmax=38 (V_1hot=0.509)  [mixed]
+  random_U[0,1]=0.818   zero=1.000   const_0.125=1.000   const_0.5=0.610   const_1.0=1.000
+  one-hot r=0..7: 1.000 1.000 0.613 0.852 1.000 1.000 1.000 1.000   pref_r=0  spread=0.387
+
+--- c=302  circuit=(0, 2)  V_argmax=2 (V_1hot=0.231)  [H1 (routing-gated)]
+  random_U[0,1]=0.956   zero=0.818   const_0.125=1.000   const_0.5=1.000   const_1.0=0.983
+  one-hot r=0..7: 1.000 0.719 1.000 1.000 0.802 1.000 0.833 0.729   pref_r=0  spread=0.281
+
+--- c=315  circuit=(1, 2)  V_argmax=14 (V_1hot=0.317)  [H1 (routing-gated)]
+  random_U[0,1]=0.986   zero=0.917   const_0.125=1.000   const_0.5=0.986   const_1.0=1.000
+  one-hot r=0..7: 0.735 1.000 1.000 1.000 0.914 1.000 0.852 1.000   pref_r=1  spread=0.265
+
+--- c=511  circuit=(1, 2)  V_argmax=14 (V_1hot=0.288)  [mixed]
+  random_U[0,1]=0.947   zero=1.000   const_0.125=1.000   const_0.5=0.894   const_1.0=1.000
+  one-hot r=0..7: 1.000 1.000 1.000 1.000 0.548 1.000 0.609 1.000   pref_r=0  spread=0.452
+
+--- c=399  circuit=(4, 2)  V_argmax=33 (V_1hot=0.361)  [mixed]
+  random_U[0,1]=0.861   zero=0.527   const_0.125=0.819   const_0.5=1.000   const_1.0=0.940
+  one-hot r=0..7: 1.000 0.000 1.000 0.000 0.346 0.868 0.839 0.713   pref_r=0  spread=1.000
+
+--- c=238  circuit=(5, 2)  V_argmax=42 (V_1hot=0.362)  [H1 (routing-gated)]
+  random_U[0,1]=0.980   zero=0.879   const_0.125=0.968   const_0.5=1.000   const_1.0=1.000
+  one-hot r=0..7: 0.913 1.000 1.000 0.946 0.919 1.000 1.000 1.000   pref_r=1  spread=0.087
+
+--- c=345  circuit=(5, 2)  V_argmax=69 (V_1hot=0.484)  [mixed]
+  random_U[0,1]=0.302   zero=1.000   const_0.125=1.000   const_0.5=0.000   const_1.0=0.000
+  one-hot r=0..7: 1.000 0.000 1.000 0.081 1.000 1.000 1.000 0.320   pref_r=0  spread=1.000
+
+--- c=254  circuit=(6, 2)  V_argmax=50 (V_1hot=0.420)  [mixed]
+  random_U[0,1]=0.425   zero=0.436   const_0.125=0.510   const_0.5=0.301   const_1.0=0.000
+  one-hot r=0..7: 0.000 0.000 1.000 0.268 0.379 1.000 0.269 0.082   pref_r=2  spread=1.000
+
+--- c=220  circuit=(0, 3)  V_argmax=1 (V_1hot=0.382)  [mixed]
+  random_U[0,1]=0.960   zero=1.000   const_0.125=1.000   const_0.5=0.948   const_1.0=0.907
+  one-hot r=0..7: 1.000 1.000 0.952 0.777 0.870 0.650 1.000 1.000   pref_r=0  spread=0.350
+
+--- c=316  circuit=(2, 3)  V_argmax=17 (V_1hot=0.359)  [mixed]
+  random_U[0,1]=0.950   zero=0.552   const_0.125=0.802   const_0.5=1.000   const_1.0=1.000
+  one-hot r=0..7: 0.812 0.726 0.904 0.956 0.874 0.896 0.842 0.444   pref_r=3  spread=0.512
+
+--- c=563  circuit=(2, 3)  V_argmax=20 (V_1hot=0.441)  [H1 (routing-gated)]
+  random_U[0,1]=0.985   zero=0.857   const_0.125=1.000   const_0.5=0.992   const_1.0=0.725
+  one-hot r=0..7: 0.961 1.000 0.748 0.944 0.898 0.912 1.000 1.000   pref_r=1  spread=0.252
+
+--- c=491  circuit=(5, 3)  V_argmax=47 (V_1hot=0.341)  [mixed]
+  random_U[0,1]=0.772   zero=1.000   const_0.125=1.000   const_0.5=0.038   const_1.0=1.000
+  one-hot r=0..7: 1.000 1.000 1.000 0.000 0.763 0.647 0.345 1.000   pref_r=0  spread=1.000
+
+--- c=67  circuit=(6, 3)  V_argmax=55 (V_1hot=0.381)  [mixed]
+  random_U[0,1]=0.928   zero=1.000   const_0.125=0.969   const_0.5=0.849   const_1.0=1.000
+  one-hot r=0..7: 0.848 1.000 1.000 0.776 1.000 0.416 1.000 0.876   pref_r=1  spread=0.584
+
+--- c=485  circuit=(7, 3)  V_argmax=57 (V_1hot=0.375)  [mixed]
+  random_U[0,1]=0.319   zero=0.000   const_0.125=0.000   const_0.5=0.000   const_1.0=1.000
+  one-hot r=0..7: 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000   pref_r=0  spread=0.000
+
+--- c=245  circuit=(2, 4)  V_argmax=23 (V_1hot=0.577)  [mixed]
+  random_U[0,1]=0.975   zero=0.534   const_0.125=0.758   const_0.5=0.903   const_1.0=0.893
+  one-hot r=0..7: 1.000 0.700 0.747 1.000 0.834 0.746 0.714 1.000   pref_r=0  spread=0.300
+
+--- c=54  circuit=(3, 4)  V_argmax=29 (V_1hot=0.233)  [mixed]
+  random_U[0,1]=0.831   zero=0.206   const_0.125=0.446   const_0.5=0.640   const_1.0=0.888
+  one-hot r=0..7: 0.847 0.676 0.703 1.000 0.607 1.000 1.000 1.000   pref_r=3  spread=0.393
+
+--- c=158  circuit=(5, 4)  V_argmax=45 (V_1hot=0.270)  [mixed]
+  random_U[0,1]=0.976   zero=0.909   const_0.125=1.000   const_0.5=0.926   const_1.0=1.000
+  one-hot r=0..7: 0.913 1.000 1.000 0.770 1.000 0.958 0.694 1.000   pref_r=1  spread=0.306
+
+--- c=88  circuit=(7, 4)  V_argmax=71 (V_1hot=0.316)  [mixed]
+  random_U[0,1]=0.615   zero=1.000   const_0.125=1.000   const_0.5=0.040   const_1.0=1.000
+  one-hot r=0..7: 0.494 1.000 0.374 1.000 0.647 1.000 1.000 0.096   pref_r=1  spread=0.904
+
+--- c=5  circuit=(0, 5)  V_argmax=1 (V_1hot=0.242)  [H2 (source-gated)]
+  random_U[0,1]=0.383   zero=0.000   const_0.125=0.000   const_0.5=0.000   const_1.0=0.673
+  one-hot r=0..7: 0.000 0.000 1.000 0.000 0.000 0.000 1.000 1.000   pref_r=2  spread=1.000
+
+--- c=179  circuit=(0, 5)  V_argmax=0 (V_1hot=0.235)  [mixed]
+  random_U[0,1]=0.902   zero=0.616   const_0.125=0.717   const_0.5=0.860   const_1.0=1.000
+  one-hot r=0..7: 1.000 1.000 1.000 0.797 1.000 1.000 0.440 0.649   pref_r=0  spread=0.560
+
+--- c=249  circuit=(1, 5)  V_argmax=12 (V_1hot=0.331)  [H1 (routing-gated)]
+  random_U[0,1]=0.943   zero=0.849   const_0.125=0.836   const_0.5=0.956   const_1.0=1.000
+  one-hot r=0..7: 1.000 1.000 1.000 1.000 1.000 0.996 0.762 1.000   pref_r=0  spread=0.238
+
+--- c=35  circuit=(2, 5)  V_argmax=20 (V_1hot=0.276)  [mixed]
+  random_U[0,1]=0.958   zero=0.652   const_0.125=0.768   const_0.5=0.891   const_1.0=1.000
+  one-hot r=0..7: 1.000 0.672 0.918 1.000 1.000 0.864 1.000 1.000   pref_r=0  spread=0.328
+
+--- c=195  circuit=(3, 5)  V_argmax=28 (V_1hot=0.373)  [mixed]
+  random_U[0,1]=0.973   zero=1.000   const_0.125=1.000   const_0.5=0.919   const_1.0=1.000
+  one-hot r=0..7: 1.000 1.000 0.626 1.000 0.973 0.924 0.869 0.895   pref_r=0  spread=0.374
+
+--- c=131  circuit=(4, 5)  V_argmax=32 (V_1hot=0.377)  [H2 (source-gated)]
+  random_U[0,1]=0.459   zero=0.000   const_0.125=0.000   const_0.5=0.402   const_1.0=0.983
+  one-hot r=0..7: 1.000 0.000 0.331 1.000 0.000 0.000 0.245 0.000   pref_r=0  spread=1.000
+
+--- c=401  circuit=(2, 6)  V_argmax=21 (V_1hot=0.375)  [mixed]
+  random_U[0,1]=0.938   zero=0.606   const_0.125=0.802   const_0.5=0.878   const_1.0=0.829
+  one-hot r=0..7: 0.521 1.000 1.000 0.560 1.000 1.000 0.973 1.000   pref_r=1  spread=0.479
+
+--- c=52  circuit=(4, 6)  V_argmax=3 (V_1hot=0.285)  [mixed]
+  random_U[0,1]=0.314   zero=1.000   const_0.125=1.000   const_0.5=0.000   const_1.0=0.000
+  one-hot r=0..7: 1.000 0.000 1.000 1.000 0.000 1.000 1.000 1.000   pref_r=0  spread=1.000
+
+--- c=442  circuit=(5, 6)  V_argmax=43 (V_1hot=0.330)  [mixed]
+  random_U[0,1]=0.936   zero=0.806   const_0.125=0.941   const_0.5=0.883   const_1.0=0.153
+  one-hot r=0..7: 1.000 0.608 0.699 1.000 0.725 1.000 0.619 0.798   pref_r=0  spread=0.392
+
+--- c=560  circuit=(5, 6)  V_argmax=69 (V_1hot=0.654)  [H1 (routing-gated)]
+  random_U[0,1]=0.589   zero=1.000   const_0.125=1.000   const_0.5=0.742   const_1.0=0.000
+  one-hot r=0..7: 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000   pref_r=0  spread=0.000
+
+--- c=268  circuit=(6, 6)  V_argmax=54 (V_1hot=0.423)  [H2 (source-gated)]
+  random_U[0,1]=0.358   zero=0.000   const_0.125=0.000   const_0.5=0.000   const_1.0=0.000
+  one-hot r=0..7: 0.111 1.000 0.000 0.000 0.000 1.000 0.000 0.000   pref_r=1  spread=1.000
+
+--- c=336  circuit=(7, 6)  V_argmax=57 (V_1hot=0.368)  [H2 (source-gated)]
+  random_U[0,1]=0.762   zero=0.156   const_0.125=0.107   const_0.5=1.000   const_1.0=1.000
+  one-hot r=0..7: 1.000 1.000 0.000 0.000 1.000 0.494 0.077 0.169   pref_r=0  spread=1.000
+
+--- c=320  circuit=(0, 7)  V_argmax=3 (V_1hot=0.421)  [mixed]
+  random_U[0,1]=0.350   zero=1.000   const_0.125=1.000   const_0.5=0.000   const_1.0=0.000
+  one-hot r=0..7: 1.000 1.000 0.969 0.000 1.000 1.000 1.000 1.000   pref_r=0  spread=1.000
+
+--- c=333  circuit=(1, 7)  V_argmax=10 (V_1hot=0.260)  [mixed]
+  random_U[0,1]=0.362   zero=1.000   const_0.125=1.000   const_0.5=0.000   const_1.0=0.988
+  one-hot r=0..7: 1.000 0.000 1.000 0.937 1.000 1.000 1.000 0.253   pref_r=0  spread=1.000
+
+--- c=393  circuit=(1, 7)  V_argmax=8 (V_1hot=0.509)  [mixed]
+  random_U[0,1]=0.598   zero=1.000   const_0.125=1.000   const_0.5=0.909   const_1.0=0.812
+  one-hot r=0..7: 1.000 0.000 0.470 1.000 1.000 1.000 1.000 0.000   pref_r=0  spread=1.000
+
+--- c=234  circuit=(4, 7)  V_argmax=38 (V_1hot=0.616)  [H2 (source-gated)]
+  random_U[0,1]=0.749   zero=0.175   const_0.125=0.304   const_0.5=0.372   const_1.0=0.000
+  one-hot r=0..7: 0.658 1.000 0.474 0.082 0.797 0.000 1.000 1.000   pref_r=1  spread=1.000
+
+--- c=46  circuit=(5, 7)  V_argmax=47 (V_1hot=0.165)  [mixed]
+  random_U[0,1]=0.975   zero=0.617   const_0.125=0.909   const_0.5=0.937   const_1.0=0.918
+  one-hot r=0..7: 0.895 0.907 1.000 0.894 0.699 0.949 0.805 1.000   pref_r=2  spread=0.301
+
+--- c=409  circuit=(5, 7)  V_argmax=44 (V_1hot=0.334)  [mixed]
+  random_U[0,1]=0.819   zero=0.754   const_0.125=0.740   const_0.5=0.703   const_1.0=0.733
+  one-hot r=0..7: 0.957 0.669 0.868 0.875 1.000 1.000 0.678 0.437   pref_r=4  spread=0.563
+
+--- c=341  circuit=(6, 7)  V_argmax=54 (V_1hot=0.285)  [H1 (routing-gated)]
+  random_U[0,1]=0.990   zero=0.740   const_0.125=0.957   const_0.5=1.000   const_1.0=0.976
+  one-hot r=0..7: 0.835 0.921 0.832 0.890 0.863 0.825 0.968 0.833   pref_r=6  spread=0.143
+
+--- c=392  circuit=(6, 7)  V_argmax=50 (V_1hot=0.329)  [H2 (source-gated)]
+  random_U[0,1]=0.729   zero=0.000   const_0.125=0.000   const_0.5=0.375   const_1.0=0.849
+  one-hot r=0..7: 0.033 1.000 1.000 0.494 0.365 1.000 1.000 1.000   pref_r=1  spread=0.967
+
+--- c=464  circuit=(6, 7)  V_argmax=50 (V_1hot=0.170)  [mixed]
+  random_U[0,1]=0.941   zero=0.868   const_0.125=1.000   const_0.5=1.000   const_1.0=1.000
+  one-hot r=0..7: 0.434 0.881 1.000 1.000 1.000 0.866 0.883 0.620   pref_r=2  spread=0.566
+
+--- c=580  circuit=(6, 7)  V_argmax=15 (V_1hot=0.367)  [mixed]
+  random_U[0,1]=0.602   zero=0.697   const_0.125=0.897   const_0.5=0.766   const_1.0=0.000
+  one-hot r=0..7: 0.716 0.818 1.000 0.000 1.000 1.000 0.777 0.815   pref_r=2  spread=1.000
+
+--- c=287  circuit=(7, 7)  V_argmax=60 (V_1hot=0.196)  [mixed]
+  random_U[0,1]=0.949   zero=0.850   const_0.125=0.961   const_0.5=1.000   const_1.0=1.000
+  one-hot r=0..7: 1.000 1.000 1.000 1.000 0.954 0.777 1.000 0.569   pref_r=0  spread=0.431
+
+========================================================================================
+AGGREGATE
+========================================================================================
+  Total circuit-specific: 53
+    H1 (routing-gated): 9
+    H2 (source-gated):  9
+    mixed:              35
+
+Saved plot to input_probe.png
