@@ -324,7 +324,8 @@ def main() -> None:
     print(f"Loading {args.path} ...")
     model = ComponentModel.from_pretrained(args.path)
     model.eval()
-    device = next(model.parameters()).device
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
     print(f"Device: {device}")
 
     layer = args.layer
