@@ -20,6 +20,14 @@ The explainer set per (i, j) is auto-detected:
 
 For comparison we also report the *static* analytical target W_T[j-block, D+i].
 
+Reported cosines (per circuit, then aggregated):
+  cos(EMP_T, b_target)      target sanity check (≈ 1.0)
+  cos(EMP_T, EMP_S)         SPD faithfulness on bias-only inputs (ceiling for EXPLAINED)
+  cos(EMP_T, EXPLAINED)     hypothesis vs ground truth
+  cos(EXPLAINED, b_target)  hypothesis vs ground truth (norm-insensitive variant)
+  cos(EMP_S, EXPLAINED)     direct: how much of SPD's bias contribution does our subset capture
+                            (isolates "missing components" from SPD imperfection)
+
 Usage:
     python scripts/_check_empirical_bias.py wandb:paramluhadiya/spd/runs/<run_id> \\
         [--layer model.0] [--n_samples 4096] [--out_prefix bias]
@@ -296,6 +304,7 @@ def measure_bias(
         cos_emp_t_vs_emp_s=cos(emp_t[out_slice], emp_s[out_slice]),
         cos_emp_t_vs_explained=cos(emp_t[out_slice], explained[out_slice]),
         cos_explained_vs_target=cos(explained[out_slice], b_target[out_slice]),
+        cos_emp_s_vs_explained=cos(emp_s[out_slice], explained[out_slice]),
         # Norms
         norm_emp_t=float(emp_t[out_slice].norm()),
         norm_emp_s=float(emp_s[out_slice].norm()),
@@ -358,7 +367,8 @@ def main() -> None:
     print(
         f"{'i':>2s} {'j':>2s}  {'|NC|':>4s} {'|H1|':>4s} {'|gate|':>6s}   "
         f"{'cos(EMP_T,target)':>17s} {'cos(EMP_T,EMP_S)':>17s} "
-        f"{'cos(EMP_T,EXPL)':>16s} {'cos(EXPL,target)':>16s}   "
+        f"{'cos(EMP_T,EXPL)':>16s} {'cos(EXPL,target)':>16s} "
+        f"{'cos(EMP_S,EXPL)':>16s}   "
         f"{'||target||':>10s} {'||EXPL||':>9s}"
     )
 
@@ -367,6 +377,7 @@ def main() -> None:
     cos_emp_t_emp_s = np.zeros((NUM_BLOCKS, NUM_BLOCKS))
     cos_emp_t_explained = np.zeros((NUM_BLOCKS, NUM_BLOCKS))
     cos_explained_target = np.zeros((NUM_BLOCKS, NUM_BLOCKS))
+    cos_emp_s_explained = np.zeros((NUM_BLOCKS, NUM_BLOCKS))
 
     for i_val in range(NUM_BLOCKS):
         for j_val in range(NUM_BLOCKS):
@@ -390,12 +401,14 @@ def main() -> None:
             cos_emp_t_emp_s[i_val, j_val] = res["cos_emp_t_vs_emp_s"]
             cos_emp_t_explained[i_val, j_val] = res["cos_emp_t_vs_explained"]
             cos_explained_target[i_val, j_val] = res["cos_explained_vs_target"]
+            cos_emp_s_explained[i_val, j_val] = res["cos_emp_s_vs_explained"]
 
             print(
                 f"{i_val:>2d} {j_val:>2d}  {len(nc[bias_idx]):>4d} {len(h1[(i_val, j_val)]):>4d} "
                 f"{len(gate):>6d}   "
                 f"{res['cos_emp_t_vs_target']:>+17.4f} {res['cos_emp_t_vs_emp_s']:>+17.4f} "
-                f"{res['cos_emp_t_vs_explained']:>+16.4f} {res['cos_explained_vs_target']:>+16.4f}"
+                f"{res['cos_emp_t_vs_explained']:>+16.4f} {res['cos_explained_vs_target']:>+16.4f} "
+                f"{res['cos_emp_s_vs_explained']:>+16.4f}"
                 f"   {res['norm_target']:>10.3f} {res['norm_explained']:>9.3f}"
             )
 
@@ -407,6 +420,7 @@ def main() -> None:
         ("cos(EMP_T, EMP_S)  [faithfulness]", cos_emp_t_emp_s),
         ("cos(EMP_T, EXPLAINED)", cos_emp_t_explained),
         ("cos(EXPLAINED, b_target)", cos_explained_target),
+        ("cos(EMP_S, EXPLAINED)  [direct emp vs expl]", cos_emp_s_explained),
     ]:
         print(
             f"  {name:<36s}  mean={arr.mean():+.4f}  median={np.median(arr):+.4f}  "
@@ -417,14 +431,21 @@ def main() -> None:
     # ------------------------------------------------------------------
     # Plots: 4 heatmaps + a few sample bar charts
     # ------------------------------------------------------------------
-    fig, axes = plt.subplots(1, 4, figsize=(20, 4.5))
+    fig, axes = plt.subplots(1, 5, figsize=(25, 4.5))
     titles = [
         "cos(EMP_T, b_target)",
         "cos(EMP_T, EMP_S)\n[SPD faithfulness]",
         "cos(EMP_T, EXPLAINED)",
         "cos(EXPLAINED, b_target)",
+        "cos(EMP_S, EXPLAINED)\n[direct emp vs expl]",
     ]
-    grids = [cos_emp_t_target, cos_emp_t_emp_s, cos_emp_t_explained, cos_explained_target]
+    grids = [
+        cos_emp_t_target,
+        cos_emp_t_emp_s,
+        cos_emp_t_explained,
+        cos_explained_target,
+        cos_emp_s_explained,
+    ]
     for ax, title, g in zip(axes, titles, grids, strict=True):
         im = ax.imshow(g, cmap="RdBu_r", vmin=-1, vmax=1, aspect="equal")
         ax.set_xticks(range(NUM_BLOCKS))
@@ -473,7 +494,8 @@ def main() -> None:
             ax.set_title(
                 f"(i={i_val}, j={j_val}) "
                 f"cos(EMP_T,EXPL)={r['cos_emp_t_vs_explained']:+.3f}  "
-                f"cos(EXPL,target)={r['cos_explained_vs_target']:+.3f}",
+                f"cos(EXPL,target)={r['cos_explained_vs_target']:+.3f}  "
+                f"cos(EMP_S,EXPL)={r['cos_emp_s_vs_explained']:+.3f}",
                 fontsize=8,
             )
             ax.legend(fontsize=7, loc="upper right")
